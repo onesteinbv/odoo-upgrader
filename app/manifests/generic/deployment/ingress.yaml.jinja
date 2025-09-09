@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "{{ job.id }}-{{ args['mode'] }}"
+spec:
+  rules:
+    - host: "{{ job.id }}-{{ args['mode'] }}.{{ job_domain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: "svc-{{ job.id }}-{{ args['mode'] }}"
+                port:
+                  number: 8069

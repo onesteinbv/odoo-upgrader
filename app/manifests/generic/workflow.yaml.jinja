@@ -1,0 +1,299 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: "{{ job.id }}"
+  labels:
+    odoo-upgrader/type: upgrade
+  finalizers:
+    - odoo-upgrader/cleanup  # Prevent accidental deletion of workflow without cleanup
+spec:
+  entrypoint: entrypoint
+  templates:
+    - name: entrypoint
+      steps:
+        {%- for step in steps %}
+        - - name: "{{ step.name }}"
+            template: "{{ step.template }}"
+            arguments:
+              parameters:
+              {%- for key, value in step.args.items() %}
+                - name: "{{ key }}"
+                  value: "{{ value }}"
+              {%- endfor %}
+        {%- endfor %}
+    - name: restore-from-file
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+        artifacts:
+          - name: s3  # https://argo-workflows.readthedocs.io/en/latest/walk-through/hardwired-artifacts/
+            path: /opt/ou/s3/object
+            s3:
+              endpoint: {{ s3.endpoint }}
+              bucket: "{{ s3.bucket }}"
+              key: "{{ job.dump_object }}"
+              accessKeySecret:
+                name: "{{ job.id }}-s3-credentials"
+                key: accessKey
+              secretKeySecret:
+                name: "{{ job.id }}-s3-credentials"
+                key: secretKey
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      script:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        source: |
+          # Artifacts are mounted as root:root and will not change based on the running user
+          chown odoo:odoo s3/object
+          su odoo -c 'odoo-upgrader/restore-from-file.sh'
+        securityContext:
+          runAsUser: 0
+    - name: restore-from-db
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+          - name: TARGET_DATABASE
+            value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - odoo-upgrader/restore-from-db.sh
+    - name: step
+      inputs:
+        parameters:
+          - name: repo
+          - name: branch
+          - name: image
+          - name: directory
+            default: "."
+          - name: repos_file
+            default: "repos.yaml"
+          - name: mode
+            default: "test"
+      outputs:
+        artifacts:
+          - name: result
+            path: /opt/ou/out/result.zip
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+          - name: MODE
+            value: "{{ raw('inputs.parameters.mode') }}"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - |
+            odoo-upgrader/step.sh \
+              "{{ raw('inputs.parameters.repo') }}" \
+              "{{ raw('inputs.parameters.branch') }}" \
+              "{{ raw('inputs.parameters.directory') }}" \
+              "{{ raw('inputs.parameters.repos_file') }}"
+    - name: initialize-changelog
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"       
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-test"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - |
+            odoo-upgrader/init-changelog.sh
+    - name: replay-changelog
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-test"
+          - name: TARGET_DATABASE
+            value: "{{ raw('workflow.name') }}-live"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - |
+            odoo-upgrader/replay-changelog.sh
+      outputs:
+        artifacts:
+          - name: result
+            path: /opt/ou/out/result.zip
+    - name: wait-approval
+      suspend: {}
+    - name: deployment
+      inputs:
+        parameters:
+          - name: command
+          - name: image
+          - name: manifests_dir
+          - name: repo
+          - name: branch
+          - name: directory
+            default: "."
+          - name: repos_file
+            default: "repos.yaml"
+          - name: mode
+            default: "test"
+      suspend: {}
+    - name: echo
+      inputs:
+        parameters:
+          - name: command
+          - name: message
+      suspend: {}      
+    - name: scale-deployment
+      inputs:
+        parameters:
+          - name: name
+            default: "{{ env.get('TARGET_DEPLOYMENT', args['target_deployment']) }}"
+          - name: namespace
+            default: "{{ env.get('TARGET_NAMESPACE', args['target_namespace']) }}"
+          - name: replicas
+      resource:
+        action: patch
+        manifest: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ raw('inputs.parameters.name') }}
+            namespace: {{ raw('inputs.parameters.namespace') }}
+          spec:
+            replicas: {{ raw('inputs.parameters.replicas') }}
+    - name: update-image
+      inputs:
+        parameters:
+          - name: deployment
+            default: "{{ env.get('TARGET_DEPLOYMENT', args['target_deployment']) }}"
+          - name: namespace
+            default: "{{ env.get('TARGET_NAMESPACE', args['target_namespace']) }}"
+          - name: container
+            default: "{{ env.get('TARGET_CONTAINER', args['target_container']) }}"
+          - name: image
+      resource:
+        action: patch
+        manifest: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ raw('inputs.parameters.deployment') }}
+            namespace: {{ raw('inputs.parameters.namespace') }}
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: {{ raw('inputs.parameters.container') }}
+                    image: {{ raw('inputs.parameters.image') }}
+    - name: move-db
+      inputs:
+        parameters:
+          - name: image
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-live"
+          - name: TARGET_DATABASE
+            value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - odoo-upgrader/move-db.sh

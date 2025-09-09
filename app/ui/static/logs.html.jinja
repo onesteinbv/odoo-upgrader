@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Jobs</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css"
+        >
+        <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+    </head>
+    <body>
+        <script type="module">
+            import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
+
+            const jobId = "{{ job.id }}";
+
+            class StepLogViewer extends LitElement {
+                static properties = {
+                    selection: { state: true },
+                    logs: { state: true, type: String }
+                };
+
+                constructor() {
+                    super();
+                    this.selection = "{{ job.steps and (job.steps | sort(attribute='started_at'))[-1].id or '' }}"
+                    this._reader = null;
+                    this.logs = "";
+                    this.$logs = null;
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                connectedCallback() {
+                    super.connectedCallback();
+                    this._startReading();
+                }
+
+                async _onChange(e) {
+                    const target = e.target;
+                    this.selection = target.value;
+                    this._startReading();
+                }
+
+                async _startReading() {
+                    if (this._reader) {
+                        console.log("Stop reading...");
+                        if (!this.abortController.aborted) {
+                            this.abortController.abort();
+                        }
+                        await this._reader.return();
+                        console.log("Reading stopped...");
+                        this.logs = ""
+                    }  // Close existing reader
+
+                    this.abortController = new AbortController();
+
+                    console.log("Start reading...");
+                    this._reader = this._read(this.abortController.signal);
+                    for await (const lines of this._reader) {
+                        this.logs = this.logs + "\n" + lines.join("\n");
+                    }
+                }
+
+                async * _read(signal) {
+                    const resp = await fetch(`/api/v1/jobs/${this.selection}/logs`, { signal });
+                    const decoder = new TextDecoder();
+                    let buffer;
+                    
+                    for await (const value of resp.body) {
+                        buffer += decoder.decode(value);
+                        let lines = buffer.split("\n");
+                        buffer = lines.pop()  // Keep incomplete line in buffer
+                        yield lines
+                    }
+                }
+
+                updated() {
+                    super.updated();
+                    const $logs = document.getElementById("logs")
+                    $logs.scrollTo(0, $logs.scrollHeight);
+                }
+                
+                render() {
+                    return html`
+                        <div class="is-flex is-flex-direction-column" style="height: 100%;">
+                            <div class="block">
+                                <div class="select">
+                                    <select .value=${this.selection} @change=${this._onChange}>
+                                        {% for step in job.steps | sort(attribute='started_at') %}
+                                            <option value="{{ step.id }}">{{ step.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="logs" class="box is-flex-grow-1" style="overflow: auto;">
+                                <code style="display: block; white-space: pre-line;">
+                                    ${this.logs}
+                                </code>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+            
+            customElements.define("step-log-viewer", StepLogViewer);
+        </script>
+        <section class="section" style="height: 100vh;">
+            <div class="container is-fluid" style="height: 100%;">
+                <a href="/ui" class="button mb-4">
+                    <span class="icon">
+                        <i class="fa fa-chevron-left"></i>
+                    </span> 
+                    <span>Back</span>
+                </a>
+                <step-log-viewer></step-log-viewer>
+            </div>
+        </section>
+    </body>
+</html>

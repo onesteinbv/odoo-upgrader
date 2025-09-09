@@ -1,0 +1,20 @@
+resources:
+  - cleanup-workflow.yaml
+
+namespace: "{{ namespace }}"
+
+labels:
+  - includeSelectors: true
+    includeTemplates: true
+    pairs:
+      odoo-upgrader/src-id: "{{ job.src_id }}"
+      odoo-upgrader/job-id: "{{ job.id }}"
+      app.kubernetes.io/managed-by: "odoo-upgrader"
+
+configMapGenerator:
+  - name: "{{ job.id }}-cleanup-scripts"
+    files:
+      - scripts/delete-db.sh
+
+generatorOptions:
+  disableNameSuffixHash: true

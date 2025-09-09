@@ -1,0 +1,2 @@
+class MissingRecord(Exception):
+    pass

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Jobs</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css"
+        >
+        <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+    </head>
+    <body>
+        <script type="module">
+            import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
+
+            class JobList extends LitElement {
+                static properties = {
+                    jobs: { state: true }
+                };
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                constructor() {
+                    super();
+                    this.jobs = [];
+                    this.eventSource = null;
+                }
+
+                connectedCallback() {
+                    super.connectedCallback();
+                    this.getJobs().then(jobs => this.jobs = jobs);
+
+                    this.eventSource = new EventSource("/api/v1/events");
+                    this.eventSource.addEventListener("job:new", this.onNewJob.bind(this));
+                    this.eventSource.addEventListener("job:updated", this.onJobUpdated.bind(this));
+                    this.eventSource.addEventListener("job:deleted", this.onJobDeleted.bind(this));
+                    
+                    window.addEventListener("beforeunload", this._handleUnload);
+                }
+                
+                disconnectedCallback() {
+                    window.removeEventListener("beforeunload", this._handleUnload);
+                    if (this.eventSource) {
+                        this.eventSource.close();
+                    }
+                    super.disconnectedCallback();
+                }
+
+                _handleUnload() {
+                    if (this.eventSource) {
+                        this.eventSource.close();
+                    }
+                }
+
+                onNewJob(e) {
+                    const eventData = JSON.parse(e.data);
+                    let currentJobs = [...this.jobs];
+                    const jobIndex = currentJobs.findIndex((job) => job.id == eventData.id);
+                    if (jobIndex !== -1) {
+                        currentJobs[jobIndex] = { ...currentJobs[jobIndex], ...eventData };
+                    } else {
+                        currentJobs = currentJobs.concat(eventData);
+                    }
+                    this.jobs = currentJobs;
+                }
+
+                onJobUpdated(e) {
+                    const eventData = JSON.parse(e.data);
+                    let currentJobs = [...this.jobs];
+                    const jobIndex = currentJobs.findIndex((job) => job.id == eventData.id);
+                    if (jobIndex !== -1) {
+                        currentJobs[jobIndex] = { ...currentJobs[jobIndex], ...eventData };
+                    } else {
+                        currentJobs = currentJobs.concat(eventData);
+                    }
+                    this.jobs = currentJobs;
+                }
+
+                onJobDeleted(e) {
+                    let currentJobs = [...this.jobs];
+                    const eventData = JSON.parse(e.data);
+                    this.jobs = currentJobs.filter((job) => job.id != eventData.id);
+                }
+
+                async getJobs() {
+                    const res = await fetch("/api/v1/jobs");
+                    return res.json();
+                }
+
+                render() {
+                    return html`
+                        <div class="fixed-grid has-4-cols-fullhd has-5-cols-widescreen has-3-cols-desktop has-2-cols-tablet has-1-cols-mobile">
+                            <div class="grid">
+                                ${this.jobs.map(job => html`
+                                    <div class="cell">
+                                        <job-card .job="${job}"></job-card>
+                                    </div>
+                                `)}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            class StateIcon extends LitElement {
+                static properties = {
+                    state: { type: String, state: true }
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                render() {
+                    return html`
+                        <span class="icon">
+                            ${this.state == "pending" && html`
+                                <i class="fas fa-circle has-text-dark" aria-hidden="true"></i>
+                            ` || this.state == "dispatched" && html`
+                                <i class="fas fa-circle has-text-info" aria-hidden="true"></i>
+                            ` || this.state == "in_progress" && html`
+                                <i class="fas fa-circle-notch fa-spin has-text-info" aria-hidden="true"></i>
+                            ` || this.state == "failed" && html`
+                                <i class="fas fa-circle has-text-danger" aria-hidden="true"></i>
+                            ` || this.state == "succeeded" && html`
+                                <i class="fas fa-circle has-text-success" aria-hidden="true"></i>
+                            ` || this.state == "skipped" && html`
+                                <i class="fas fa-forward has-text-dark" aria-hidden="true"></i>
+                            ` || this.state == "suspended" && html`
+                                <i class="fas fa-pause has-text-warning" aria-hidden="true"></i>
+                            ` || this.state == "awaiting" && html`
+                                <i class="fas fa-circle-notch fa-spin has-text-info" aria-hidden="true"></i>
+                            ` || this.state == "cleanup_pending" && html`
+                                <i class="fas fa-trash has-text-dark" aria-hidden="true"></i>
+                            ` || this.state == "cleanup_dispatched" && html`
+                                <i class="fas fa-trash has-text-dark" aria-hidden="true"></i>
+                            ` || this.state == "cleanup_started" && html`
+                                <i class="fas fa-trash has-text-warning fa-fade" aria-hidden="true"></i>
+                            ` || this.state == "cleanup_finished" && html`
+                                <i class="fas fa-trash has-text-success" aria-hidden="true"></i>
+                            ` || this.state == "cleanup_failed" && html`
+                                <i class="fas fa-trash has-text-danger" aria-hidden="true"></i>
+                            `}
+                        </span>
+                    `;
+                }
+            }
+
+            class JobCard extends LitElement {
+                static properties = {
+                    job: { type: Object },
+                    deleteModalActive: { type: Boolean },
+                    resumeModalActive: { type: Boolean }
+                };
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                _onDeleteClicked(e) {
+                    this.deleteModalActive = true;
+                }
+
+                _onDeleteConfirmClicked(e) {
+                    this._deleteJob();
+                    this.deleteModalActive = false;
+                }
+
+                _onResumeClicked(e) {
+                    this.resumeModalActive = true;
+                }
+
+                _onResumeConfirmClicked() {
+                    this._resumeJob();
+                    this.resumeModalActive = false;
+                }
+
+                async _deleteJob() {
+                    const res = await fetch(`/api/v1/jobs/${this.job.id}`, { method: "DELETE" });
+                    return res.json();
+                }
+
+                async _resumeJob() {
+                    const res = await fetch(`/api/v1/jobs/${this.job.id}/resume`, { method: "POST" });
+                    return res.json();
+                }
+
+                _onCloseModalClicked(e) {
+                    this.deleteModalActive = false;
+                    this.resumeModalActive = false
+                }
+
+                render() {
+                    return html`
+                        <div>
+                            <div class="card">
+                                <header class="card-header">
+                                    <div class="card-header-title is-flex-direction-column is-align-items-flex-start">
+                                        <code class="tag is-dark">
+                                            ${this.job.id}
+                                        </code>
+                                        ${this.job.src_id && this.job.src_id != this.job.id && html`
+                                        <div class="mt-2 is-size-7">
+                                            <span>Re-run of:</span>
+                                            <code class="tag is-dark is-small">
+                                                ${this.job.src_id}
+                                            </code>
+                                        </div>
+                                        ` || ""}
+                                    </div>
+                                    <div class="card-header-icon">
+                                        <state-icon .state=${this.job.state}></state-icon>
+                                    </div>
+                                </header>
+                                <div class="card-content">
+                                    <progress class="progress" value="${this.job.progress * 100}" max="100">${this.job.progress * 100}%</progress>
+                                    ${this.job.steps && this.job.steps.sort((x, y) => x.started_at - y.started_at).map(step => html`
+                                        <div class="box pt-3 pb-3">
+                                            <div class="columns is-mobile is-gapless">
+                                                <div
+                                                    class="column is-11" 
+                                                    style=";">
+                                                        <span>${step.name}</span>
+                                                </div>
+
+                                                <div class="column has-text-centered is-1">
+                                                    <state-icon .state=${step.state}></state-icon>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `)}
+                                </div>
+                                <footer class="card-footer">
+                                    <a href="/ui/logs/${this.job.id}" class="card-footer-item has-text-light">
+                                        Logs
+                                    </a>
+                                    ${this.job.suspended && html`
+                                        <button @click="${this._onResumeClicked}" class="card-footer-item has-text-warning" title="Resume">
+                                            <span class="icon">
+                                                <i class="fa fa-play"></i>
+                                            </span>
+                                        </button>
+                                    ` || ""}
+                                    <button @click="${this._onDeleteClicked}" class="card-footer-item has-text-danger">
+                                        Delete
+                                    </button>
+                                </footer>
+                            </div>
+                            <div class="modal ${this.deleteModalActive ? "is-active" : ""}">
+                                <div class="modal-background"></div>
+                                <div class="modal-card">
+                                    <section class="modal-card-body">
+                                        Are you sure you want to <b class="has-text-danger">delete</b> job <code class="tag is-dark">${this.job.id}</code>?
+                                    </section>
+                                    <footer class="modal-card-foot">
+                                        <div class="buttons">
+                                            <button class="button is-danger" @click="${this._onDeleteConfirmClicked}">Confirm</button>
+                                            <button @click="${this._onCloseModalClicked}" class="button">Cancel</button>
+                                        </div>
+                                    </footer>
+                                </div>
+                                <button @click="${this._onCloseModalClicked}" class="modal-close is-large" aria-label="close"></button>
+                            </div>
+                            <div class="modal ${this.resumeModalActive ? "is-active" : ""}">
+                                <div class="modal-background"></div>
+                                <div class="modal-card">
+                                    <section class="modal-card-body">
+                                        Are you sure you want to <b>resume</b> job <code class="tag is-dark">${this.job.id}</code>?
+                                    </section>
+                                    <footer class="modal-card-foot">
+                                        <div class="buttons">
+                                            <button class="button is-success" @click="${this._onResumeConfirmClicked}">Yes, continue</button>
+                                            <button @click="${this._onCloseModalClicked}" class="button">Cancel</button>
+                                        </div>
+                                    </footer>
+                                </div>
+                                <button @click="${this._onCloseModalClicked}" class="modal-close is-large" aria-label="close"></button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            customElements.define("job-list", JobList);
+            customElements.define("job-card", JobCard);
+            customElements.define("state-icon", StateIcon);
+        </script>
+        
+        <section class="section">
+            <div class="container is-fluid">
+                <job-list></job-list>
+            </div>
+        </section>
+    </body>
+</html>

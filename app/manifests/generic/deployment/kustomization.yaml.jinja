@@ -1,0 +1,10 @@
+resources:
+  - pvc.yaml
+  - service.yaml
+  - ingress.yaml
+  - deployment.yaml
+
+namespace: "{{ namespace }}"
+
+generatorOptions:
+  disableNameSuffixHash: true

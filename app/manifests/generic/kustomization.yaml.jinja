@@ -1,0 +1,48 @@
+resources:
+  - workflow.yaml
+
+namespace: "{{ namespace }}"
+
+commonAnnotations:
+  odoo-upgrader/dump-object: "{{ job.dump_object or '' }}"
+  odoo-upgrader/upgrade-path: "{{ job.upgrade_path }}"
+
+labels:
+  - includeSelectors: true
+    includeTemplates: true
+    pairs:
+      odoo-upgrader/src-id: "{{ job.id }}"
+      app.kubernetes.io/managed-by: "odoo-upgrader"
+
+secretGenerator:
+  - name: "{{ job.id }}-secret-env"
+    literals:
+      {%- for key, value in secret_env.items() %}
+      - {{ key }}={{ value }}
+      {%- endfor %}
+  - name: "{{ job.id }}-s3-credentials"
+    literals:
+      - accessKey={{ s3.access_key }}
+      - secretKey={{ s3.secret_key }}
+
+
+configMapGenerator:
+  - name: "{{ job.id }}-env"
+    literals:
+      {%- for key, value in env.items() %}
+      - {{ key }}={{ value }}
+      {%- endfor %}
+  - name: "{{ job.id }}-scripts"
+    files:
+      - scripts/restore-from-db.sh
+      - scripts/restore-from-file.sh
+      - scripts/step.sh
+      - scripts/changelog.sql
+      - scripts/init-changelog.sh
+      - scripts/replay-changelog.sh
+      - scripts/replay-changelog.py
+      - scripts/run.sh
+      - scripts/move-db.sh
+
+generatorOptions:
+  disableNameSuffixHash: true

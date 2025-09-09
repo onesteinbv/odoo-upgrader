@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ job.id }}-{{ args['mode'] }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: odoo
+  template:
+    metadata:
+      labels:
+        name: odoo
+        odoo-upgrader/wf: "{{ job.id }}-{{ args['mode'] }}"
+    spec:
+      containers:
+      - name: odoo
+        image: "{{ args['image'] }}"
+        command: ["bash"]
+        args: ["-c", "/opt/ou/odoo-upgrader/run.sh"]
+        resources:
+          limits:
+            cpu: 800m
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        envFrom:  # Reuse secret and configmaps from upgrade wf
+          - secretRef:
+              name: "{{ job.src_id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.src_id }}-env"
+        env:
+          - name: REPO
+            value: "{{ args['repo'] }}"
+          - name: BRANCH
+            value: "{{ args['branch'] }}"
+          - name: DIRECTORY
+            value: "{{ args['directory'] }}"
+          - name: REPOS_FILE
+            value: "{{ args['repos_file'] }}"
+          - name: PGDATABASE
+            value: "{{ job.id }}-{{ args['mode'] }}"
+        ports:
+          - containerPort: 8069
+          - containerPort: 8072
+        volumeMounts:
+          - mountPath: /odoo/data
+            name: filestore
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+      volumes:
+        - name: filestore
+          persistentVolumeClaim:
+            claimName: "{{ job.id }}-{{ args['mode'] }}"
+        - name: scripts
+          configMap:
+            name: "{{ job.src_id }}-scripts"
+            defaultMode: 0755

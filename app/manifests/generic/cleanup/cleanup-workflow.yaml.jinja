@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: "{{ job.id }}-cleanup"
+  labels:
+    odoo-upgrader/type: cleanup
+spec:
+  entrypoint: entrypoint
+  ttlStrategy:
+    secondsAfterSuccess: 600
+    secondsAfterFailure: 3600
+  templates:
+    - name: entrypoint
+      steps:
+        - - name: delete-db
+            template: delete-db
+          - name: delete-deployment
+            template: delete-deployment
+          - name: delete-service
+            template: delete-service
+          - name: delete-pvc
+            template: delete-pvc
+          - name: delete-ingress
+            template: delete-ingress
+        - - name: remove-finalizer
+            template: remove-finalizer
+    - name: delete-db
+      volumes:
+        - name: cleanup-scripts
+          configMap:
+            name: "{{ job.id }}-cleanup-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:  # Use secrets created by upgrade workflow
+          - secretRef:
+              name: "{{ job.src_id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.src_id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ job.id }}"
+        volumeMounts:
+          - name: cleanup-scripts
+            mountPath: /cleanup-scripts
+        image: postgres
+        command: [bash]
+        args: ["/cleanup-scripts/delete-db.sh"]
+    - name: delete-deployment
+      resource:
+        action: delete
+        flags: [
+          "deployment", "{{ job.id }}-test", "{{ job.id }}-live"   # Could be moved to inputs but let's keep it simple stupid
+        ]
+    - name: delete-pvc
+      resource:
+        action: delete
+        flags: [
+          "pvc", "{{ job.id }}-test", "{{ job.id }}-live"
+        ]
+    - name: delete-service
+      resource:
+        action: delete
+        flags: [
+          "service", "svc-{{ job.id }}-test", "svc-{{ job.id }}-live"
+        ]
+    - name: delete-ingress
+      resource:
+        action: delete
+        flags: [
+          "ingress", "{{ job.id }}-test", "{{ job.id }}-live"
+        ]
+    - name: remove-finalizer
+      resource:
+        action: patch
+        mergeStrategy: merge
+        flags:
+          - workflow
+          - "{{ job.id }}"  # odoo-upgrader~1cleanup
+        manifest: |
+          metadata:
+            finalizers: []

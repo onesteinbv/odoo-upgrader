@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "svc-{{ job.id }}-{{ args['mode'] }}"
+spec:
+  selector:
+    name: odoo
+    odoo-upgrader/wf: "{{ job.id }}-{{ args['mode'] }}"
+  ports:
+    - port: 8069
+      targetPort: 8069
+      name: http
+    - port: 8072
+      targetPort: 8072
+      name: websocket
