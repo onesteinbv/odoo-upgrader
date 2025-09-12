@@ -3,7 +3,7 @@
 Odoo Upgrader is a tool for end-to-end upgrades from one Odoo major version to another. It leverages [OpenUpgrade](https://github.com/OCA/OpenUpgrade) and allows for full customization of the upgrade process. 
 
 **Features:**
-- Declarative upgrade paths
+- Customizable repeatable upgrade paths
 - Support for manual intervention
 - Upgrade from file or target (running Odoo instance)
 - Replay manual changes (website pages and blog posts)
