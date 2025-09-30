@@ -14,3 +14,7 @@ spec:
                 name: "svc-{{ job.id }}-{{ args['mode'] }}"
                 port:
                   number: 8069
+  tls: 
+  - hosts: 
+    - "{{ job.id }}-{{ args['mode'] }}.{{ job_domain }}"
+    secretName: "{{ job.id }}-{{ args['mode'] }}.{{ job_domain }}-tls"
