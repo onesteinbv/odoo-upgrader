@@ -335,6 +335,8 @@ spec:
           - name: TARGET_DATABASE
             value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
         volumeMounts:
+          - name: data
+            mountPath: /opt/ou/data
           - name: scripts
             mountPath: /opt/ou/odoo-upgrader
         image: "{{ raw('inputs.parameters.image') }}"
