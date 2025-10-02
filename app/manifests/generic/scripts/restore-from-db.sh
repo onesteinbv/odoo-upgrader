@@ -10,7 +10,7 @@ mkdir /opt/ou/out
     export PGDATABASE=$TARGET_PGDATABASE
 
     envsubst < odoo.cfg.tpl > odoo.cfg
-    click-odoo-backupdb -c "odoo.cfg" --format "zip" --filestore "$PGDATABASE" "/opt/ou/out/result.zip"
+    click-odoo-backupdb -c "odoo.cfg" --format "zip" --no-filestore "$PGDATABASE" "/opt/ou/out/result.zip"
 ) || exit 1
 
 set -ex

@@ -1,3 +1,4 @@
+
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
@@ -8,6 +9,16 @@ metadata:
     - odoo-upgrader/cleanup  # Prevent accidental deletion of workflow without cleanup
 spec:
   entrypoint: entrypoint
+  securityContext:
+    fsGroup: 1000  # odoo
+  volumeClaimTemplates:
+  - metadata:
+      name: "data"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 4Gi
   templates:
     - name: entrypoint
       steps:
@@ -55,6 +66,8 @@ spec:
           - name: PGDATABASE
             value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
         volumeMounts:
+          - name: data
+            mountPath: /opt/ou/data
           - name: scripts
             mountPath: /opt/ou/odoo-upgrader
         image: "{{ raw('inputs.parameters.image') }}"
@@ -90,11 +103,43 @@ spec:
         volumeMounts:
           - name: scripts
             mountPath: /opt/ou/odoo-upgrader
+          - name: data
+            mountPath: /opt/ou/data
         image: "{{ raw('inputs.parameters.image') }}"
         command: [bash]
         args: 
           - -c
           - odoo-upgrader/restore-from-db.sh
+    - name: kube-cp-filestore
+      inputs:
+        parameters:
+          - name: mode
+            default: "test"
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        volumeMounts:
+          - name: data
+            mountPath: /opt/ou/data
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+          - name: NAMESPACE
+            value: "{{ env.get('TARGET_NAMESPACE', args['target_namespace']) }}"
+          - name: CONTAINER
+            value: "{{ env.get('TARGET_CONTAINER', args['target_container']) }}"
+        image: bitnamilegacy/kubectl:latest
+        command: [sh, -c]
+        args:
+          - |
+            mkdir -p /opt/ou/data/odoo
+            POD=$(kubectl get pods -n "$NAMESPACE" -l name=odoo -o jsonpath='{.items[0].metadata.name}')
+            kubectl cp $NAMESPACE/$POD:/odoo/data/odoo /opt/ou/data/odoo -c "$CONTAINER"
+            find /opt/ou/data/odoo/filestore -maxdepth 1 -mindepth 1 -type d -name "*" -exec mv {} /opt/ou/data/odoo/filestore/$PGDATABASE \;
+            ls -lh /opt/ou/data/odoo/filestore
     - name: step
       inputs:
         parameters:

@@ -13,6 +13,8 @@ spec:
         name: odoo
         odoo-upgrader/wf: "{{ job.id }}-{{ args['mode'] }}"
     spec:
+      securityContext:
+        fsGroup: 1000  # odoo
       containers:
       - name: odoo
         image: "{{ args['image'] }}"
@@ -45,14 +47,14 @@ spec:
           - containerPort: 8069
           - containerPort: 8072
         volumeMounts:
-          - mountPath: /odoo/data
-            name: filestore
+          - name: filestore
+            mountPath: /opt/ou/data
           - name: scripts
             mountPath: /opt/ou/odoo-upgrader
       volumes:
         - name: filestore
           persistentVolumeClaim:
-            claimName: "{{ job.id }}-{{ args['mode'] }}"
+            claimName: "{{ job.id }}-data"
         - name: scripts
           configMap:
             name: "{{ job.src_id }}-scripts"
