@@ -70,8 +70,6 @@ def main():
                     source_create_date, 
                     target_create_date
                 )
-                return exit(1)
-
 
             values = {field: new_values[field] for field in relevant_tables[table_name] if field in new_values}
             query = sql.SQL("UPDATE {table_name} SET {set} WHERE id = {id}").format(
