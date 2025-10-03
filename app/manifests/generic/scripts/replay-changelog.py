@@ -64,7 +64,12 @@ def main():
             source_create_date = source_create_date[0]
             target_create_date = target_create_date[0]
             if source_create_date != target_create_date:  # Not the same record
-                _logger.error("Target record is not the source record")
+                _logger.error(
+                    "Target record is not the source record (record_id = %s. source = %s, target = %s)",
+                    record_id, 
+                    source_create_date, 
+                    target_create_date
+                )
                 return exit(1)
 
 
