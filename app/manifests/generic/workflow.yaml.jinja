@@ -98,7 +98,7 @@ spec:
         env:
           - name: PGDATABASE
             value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
-          - name: TARGET_DATABASE
+          - name: TARGET_PGDATABASE
             value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
         volumeMounts:
           - name: scripts
@@ -234,7 +234,7 @@ spec:
         env:
           - name: PGDATABASE
             value: "{{ raw('workflow.name') }}-test"
-          - name: TARGET_DATABASE
+          - name: TARGET_PGDATABASE
             value: "{{ raw('workflow.name') }}-live"
         volumeMounts:
           - name: scripts
@@ -332,7 +332,7 @@ spec:
         env:
           - name: PGDATABASE
             value: "{{ raw('workflow.name') }}-live"
-          - name: TARGET_DATABASE
+          - name: TARGET_PGDATABASE
             value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
         volumeMounts:
           - name: data
