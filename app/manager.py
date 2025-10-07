@@ -406,6 +406,13 @@ class Manager:
             context.args.update(**kwargs)
         await k8s.apply(manifests_dir, context)
 
+    async def _command_undeploy(self, job_id: str, manifests_dir: str, **kwargs: dict[str, str]):
+        with Session() as session:
+            job = Job.get_by_id(session, job_id)
+            context: k8s.Context = k8s.Context.from_job(job)
+            context.args.update(**kwargs)
+        await k8s.delete(manifests_dir, context)
+
     @classmethod
     async def resume_job(cls, job_id: str):
         with Session.begin() as session:

@@ -92,13 +92,14 @@ async def _kubectl(*args: list[str]) -> str | None:
         raise Exception(stderr.decode())
     return stdout.decode()
 
-
-
 async def apply(manifests_dir: Path, vars: Context):
     with render(manifests_dir, vars) as tmp_dir:
         await _kubectl("apply", "--dry-run=server", "-k", str(tmp_dir))
         await _kubectl("apply", "--wait=false", "-k", str(tmp_dir))
 
+async def delete(manifests_dir: Path, vars: Context):
+    with render(manifests_dir, vars) as tmp_dir:
+        await _kubectl("delete", "-f", str(tmp_dir))
 
 async def delete_all(job_id: str):
     await delete_by_label("odoo-upgrader/src-id", job_id)
