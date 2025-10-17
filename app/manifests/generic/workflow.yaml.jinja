@@ -214,6 +214,39 @@ spec:
           - -c
           - |
             odoo-upgrader/init-changelog.sh
+    - name: accounting-summary
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      script:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+        volumeMounts:
+          - name: data
+            mountPath: /opt/ou/data
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - |
+            odoo-upgrader/account-summary.sh
+        securityContext:
+          runAsUser: 0            
     - name: replay-changelog
       inputs:
         parameters:

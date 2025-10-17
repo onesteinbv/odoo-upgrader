@@ -10,7 +10,6 @@ import click
 import click_odoo
 
 
-
 @click.command()
 @click.option("--digest", is_flag=True, help="Output only the digest of the summary")
 @click_odoo.env_options(default_log_level="critical")
@@ -46,7 +45,6 @@ def main(env, digest):
     }
 
     hexdigest = sha256(json.dumps(data).encode()).hexdigest()
-
 
     if digest:
         click.echo(hexdigest)
