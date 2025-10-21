@@ -7,8 +7,8 @@ SUMMARY=$(python odoo-upgrader/accounting-summary.py -c /opt/ou/odoo.cfg -d "$PG
 
 if [ -f /opt/ou/data/accounting-summary ]; then
     PREV_SUMMARY=$(cat /opt/ou/data/accounting-summary)
-    PREV_DIGEST=$(PREV_SUMMARY | jq .digest)
-    DIGEST=$(SUMMARY | jq .digest)
+    PREV_DIGEST=$(echo "$PREV_SUMMARY" | jq .digest)
+    DIGEST=$(echo "$SUMMARY" | jq .digest)
     if [ "$DIGEST" != "$PREV_DIGEST" ]; then
         echo "Accounting data is inconsistent ($DIGEST, previous: $PREV_DIGEST)."
         diff -u <(echo "$PREV_SUMMARY" | jq .) <(echo "$SUMMARY" | jq .)

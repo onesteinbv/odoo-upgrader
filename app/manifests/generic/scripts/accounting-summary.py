@@ -32,8 +32,14 @@ def main(env, digest):
     
     def _to_summary(line, group_field, fields):
         count_key = "%s_count" % group_field if ":" not in group_field else group_field.split(":")[0] + "_count"
+        summary_id = False
+        if line[group_field]:
+            if isinstance(line[group_field], tuple):
+                summary_id = line[group_field][0]
+            else:
+                summary_id = line[group_field]
         return {**{
-            "id": line[group_field] and line[group_field][0] or False,
+            "id": summary_id,
             "count": line[count_key],
         }, **{
             field: line[field] for field in fields

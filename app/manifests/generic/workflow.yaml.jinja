@@ -246,7 +246,7 @@ spec:
           - |
             odoo-upgrader/accounting-summary.sh
         securityContext:
-          runAsUser: 0            
+          runAsUser: 1000  # odoo
     - name: replay-changelog
       inputs:
         parameters:
