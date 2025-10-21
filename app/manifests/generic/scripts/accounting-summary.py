@@ -22,16 +22,19 @@ def main(env, digest):
     if not installed_modules:
         click.echo("Module 'account' is not installed, exiting...")
         return
-    per_account = env["account.move.line"].read_group([], ["debit", "credit"], ["account_id"])
-    per_partner = env["account.move.line"].read_group([], ["debit", "credit"], ["partner_id"])
-    per_journal = env["account.move.line"].read_group([], ["debit", "credit"], ["journal_id"])
-    per_matching_number = env["account.move.line"].read_group([], ["debit", "credit"], ["matching_number"])
-    analytic_lines = env["account.analytic.line"].read_group([], ["amount"], ["account_id"])
+
+    per_account = env["account.move.line"].read_group([], ["debit", "credit"], ["account_id"], orderby="account_id")
+    per_partner = env["account.move.line"].read_group([], ["debit", "credit"], ["partner_id"], orderby="partner_id")
+    per_journal = env["account.move.line"].read_group([], ["debit", "credit"], ["journal_id"], orderby="journal_id")
+    per_matching_number = env["account.move.line"].read_group([], ["debit", "credit"], ["matching_number"], orderby="matching_number")
+    per_date = env["account.move.line"].read_group([], ["debit", "credit"], ["date:month"], orderby="date")
+    analytic_lines = env["account.analytic.line"].read_group([], ["amount"], ["account_id"], orderby="account_id")
     
     def _to_summary(line, group_field, fields):
+        count_key = "%s_count" % group_field if ":" not in group_field else group_field.split(":")[0] + "_count"
         return {**{
             "id": line[group_field] and line[group_field][0] or False,
-            "count": line["%s_count" % group_field],
+            "count": line[count_key],
         }, **{
             field: line[field] for field in fields
         }}
@@ -41,6 +44,7 @@ def main(env, digest):
         "per_partner": [_to_summary(line, "partner_id", ["debit", "credit"]) for line in per_partner],
         "per_journal": [_to_summary(line, "journal_id", ["debit", "credit"]) for line in per_journal],
         "per_matching_number": [_to_summary(line, "matching_number", ["debit", "credit"]) for line in per_matching_number],
+        "per_date": [_to_summary(line, "date:month", ["debit", "credit"]) for line in per_date],
         "analytic_lines": [_to_summary(line, "account_id", ["amount"]) for line in analytic_lines]
     }
 
