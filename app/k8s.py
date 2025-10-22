@@ -99,6 +99,10 @@ async def apply(manifests_dir: Path, vars: Context):
 
 async def delete(manifests_dir: Path, vars: Context):
     with render(manifests_dir, vars) as tmp_dir:
+        kustomization_file = Path(tmp_dir) / "kustomization.yaml"
+        # Remove kustomization file to avoid errors during deletion
+        if kustomization_file.exists():
+            kustomization_file.unlink()
         await _kubectl("delete", "-f", str(tmp_dir), "-n", settings.job_namespace, "--wait=false", "--ignore-not-found=true")
 
 async def delete_all(job_id: str):
