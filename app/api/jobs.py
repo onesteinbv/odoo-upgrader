@@ -1,12 +1,11 @@
 
-import asyncio
-from pathlib import Path
-from typing import Optional, Required
-from fastapi import APIRouter, File, Request, UploadFile
+import json
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 
 from app import k8s
-from app.models.job import Job
 
 from ..manager import Manager, manager
 
@@ -18,8 +17,21 @@ router = APIRouter()
 async def create(
     upgrade_path: str, 
     dump_file: UploadFile | None = File(None),
-    args: dict[str, str] | None = None,
+    args: dict[str, str] | str | None = None,
 ):
+    if isinstance(args, str):  # There should be a better way to do this with FastAPI
+        try:
+            args = json.loads(args)
+        except json.JSONDecodeError:
+            raise RequestValidationError("Invalid JSON for args parameter")
+        
+        if not isinstance(args, dict):
+            raise RequestValidationError("Args must be a dict")
+            
+        for v in args.values():
+            if not isinstance(v, str):
+                raise RequestValidationError("All args values must be strings")
+
     if dump_file:
         dump_file = dump_file.file.read()
 
