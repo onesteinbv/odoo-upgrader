@@ -351,6 +351,8 @@ spec:
       inputs:
         parameters:
           - name: image
+          - name: chown
+            default: ""
       volumes:
         - name: scripts
           configMap:
@@ -367,6 +369,8 @@ spec:
             value: "{{ raw('workflow.name') }}-live"
           - name: TARGET_PGDATABASE
             value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
+          - name: CHOWN
+            value: "{{ args.get('chown', '') }}"
         volumeMounts:
           - name: data
             mountPath: /opt/ou/data
