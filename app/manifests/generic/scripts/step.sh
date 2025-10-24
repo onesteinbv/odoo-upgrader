@@ -58,5 +58,5 @@ if [[ -f post.sh ]] ; then
     . post.sh
 else
     mkdir /opt/ou/out
-    click-odoo-backupdb -c "/opt/ou/odoo.cfg" --format "zip" --filestore  "$PGDATABASE" "/opt/ou/out/result.zip"
+    click-odoo-backupdb -c "/opt/ou/odoo.cfg" --format "zip" --no-filestore  "$PGDATABASE" "/opt/ou/out/result.zip"
 fi

@@ -4,7 +4,11 @@ set -e
 mkdir /opt/ou/out
 
 envsubst < odoo.cfg.tpl > odoo.cfg
-click-odoo-backupdb -c "odoo.cfg" --format "zip" --filestore "$PGDATABASE" "/opt/ou/out/result.zip"
+if [ -n "$FILESTORE" ] && [ "$FILESTORE" = "true" ]; then
+    click-odoo-backupdb -c "odoo.cfg" --format "zip" --filestore "$PGDATABASE" "/opt/ou/out/result.zip"
+else
+    click-odoo-backupdb -c "odoo.cfg" --format "zip" --no-filestore "$PGDATABASE" "/opt/ou/out/result.zip"
+fi
 
 (
     set -e
@@ -21,7 +25,7 @@ click-odoo-backupdb -c "odoo.cfg" --format "zip" --filestore "$PGDATABASE" "/opt
     if [ -n "$CHOWN" ]; then
         echo "Transfer database ownership ...";
         psql -qc "ALTER DATABASE \"$PGDATABASE\" OWNER TO \"$CHOWN\";"
-        
+
         echo "Transfer table, sequences and views ...";
         for pgtable in $(psql -tc "SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
         do

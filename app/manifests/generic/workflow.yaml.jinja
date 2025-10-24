@@ -353,6 +353,8 @@ spec:
           - name: image
           - name: chown
             default: ""
+          - name: filestore
+            default: "false"
       volumes:
         - name: scripts
           configMap:
@@ -371,6 +373,8 @@ spec:
             value: "{{ env.get('TARGET_PGDATABASE', args['target_database']) }}"
           - name: CHOWN
             value: "{{ args.get('chown', '') }}"
+          - name: FILESTORE
+            value: "{{ raw('inputs.parameters.filestore') }}"
         volumeMounts:
           - name: data
             mountPath: /opt/ou/data
