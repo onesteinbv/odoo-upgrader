@@ -8,12 +8,19 @@ spec:
       http:
         paths:
           - path: /
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: "svc-{{ job.id }}-{{ args['mode'] }}"
                 port:
-                  number: 8069
+                  name: http
+          - pathType: ImplementationSpecific
+            path: "/websocket"
+            backend:
+              service:
+                name: "svc-{{ job.id }}-{{ args['mode'] }}"
+                port:
+                  name: websocket
   tls: 
   - hosts: 
     - "{{ job.id }}-{{ args['mode'] }}.{{ job_domain }}"
