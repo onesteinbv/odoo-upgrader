@@ -207,9 +207,16 @@
                             <div class="card">
                                 <header class="card-header">
                                     <div class="card-header-title is-flex-direction-column is-align-items-flex-start">
+                                        <div class="is-flex is-flex-direction-row pt-1">
                                         <code class="tag is-dark">
                                             ${this.job.id}
                                         </code>
+                                        ${"odoo-upgrader/deployment-url" in this.job.annotations && html`
+                                            <a class="icon tag ml-1" href="${this.job.annotations["odoo-upgrader/deployment-url"]}">
+                                                <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                            </a>
+                                        ` || ""}
+                                        </div>
                                         ${this.job.src_id && this.job.src_id != this.job.id && html`
                                         <div class="mt-2 is-size-7">
                                             <span>Re-run of:</span>
