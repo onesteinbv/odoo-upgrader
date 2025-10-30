@@ -100,6 +100,7 @@ class Job(SQLModel, table=True):
     steps: List[Step] = Field(default_factory=list, sa_column=Column(StepListDecorator))
     src_id: str | None
     args: dict[str, str] | None = Field(sa_type=JSON)
+    annotations: dict[str, str] | None = Field(sa_type=JSON)
 
     @property
     def progress(self) -> float:
@@ -190,6 +191,12 @@ class Job(SQLModel, table=True):
             job_state = State.from_cleanup_state_annotation(
                 annotations["odoo-upgrader/cleanup-state"]
             )
+
+        other_annotations = dict(annotations)
+        # Remove non-essential annotations
+        for key in list(other_annotations.keys()):
+            if not key.startswith("odoo-upgrader/"):
+                other_annotations.pop(key)
         
         job_id = metadata["name"]
         return cls(
@@ -199,5 +206,6 @@ class Job(SQLModel, table=True):
             state=job_state,
             dump_object=annotations["odoo-upgrader/dump-object"],
             upgrade_path=annotations["odoo-upgrader/upgrade-path"],
-            steps=steps
+            steps=steps,
+            annotations=other_annotations
         )

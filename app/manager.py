@@ -145,7 +145,8 @@ class Manager:
                     "state": job.state,
                     "steps": [step.model_dump() for step in job.steps],
                     "progress": job.progress,
-                    "suspended": job.suspended
+                    "suspended": job.suspended,
+                    "annotations": job.annotations
                 })
                 job_awaiting = job.awaiting
             else:
@@ -159,7 +160,8 @@ class Manager:
                     "state": job.state,
                     "steps": [step.model_dump() for step in job.steps],
                     "progress": job.progress,
-                    "suspended": job.suspended
+                    "suspended": job.suspended,
+                    "annotations": job.annotations
                 })
 
         if job_awaiting:
@@ -405,6 +407,13 @@ class Manager:
             context: k8s.Context = k8s.Context.from_job(job)
             context.args.update(**kwargs)
         await k8s.apply(manifests_dir, context)
+        k8s.append_annotations(job_id, {
+            "odoo-upgrader/deployment-url": "https://%s-%s.%s" % (
+                job.id,
+                context.args["mode"],
+                settings.job_domain
+            )
+        })
 
     async def _command_undeploy(self, job_id: str, manifests_dir: str, **kwargs: dict[str, str]):
         with Session() as session:

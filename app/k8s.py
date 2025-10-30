@@ -149,6 +149,15 @@ def remove_finalizer(job_id: str):
         }
     )
 
+def append_annotations(job_id: str, data: dict):
+    _patch_workflow(
+        job_id, {
+            "metadata": {
+                "annotations": data
+            }
+        }
+    )
+
 def _patch_workflow(job_id: str, patch: dict):
     custom_objects = client.CustomObjectsApi()
     custom_objects.patch_namespaced_custom_object(

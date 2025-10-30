@@ -60,7 +60,8 @@ async def get_jobs():
         "state": job.state,
         "steps": job.steps,
         "progress": job.progress,
-        "suspended": job.suspended
+        "suspended": job.suspended,
+        "annotations": job.annotations
     } for job in jobs]
 
 

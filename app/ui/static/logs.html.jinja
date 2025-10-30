@@ -13,11 +13,11 @@
     </head>
     <body>
         <script type="module">
-            let apiKey = sessionStorage.getItem("api-key");
+            let apiKey = localStorage.getItem("api-key");
 
             if (!apiKey) {
                 apiKey = prompt("API Key");
-                sessionStorage.setItem("api-key", apiKey);
+                localStorage.setItem("api-key", apiKey);
             }
 
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
