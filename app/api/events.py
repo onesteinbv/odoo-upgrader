@@ -3,8 +3,10 @@ import logging
 import json
 from contextlib import asynccontextmanager
 from typing import List
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request, Depends
 from sse_starlette import EventSourceResponse as EventSourceResponseBase
+
+from ..security import get_api_key
 
 from ..models.event import Event
 from ..models.db import Session
@@ -38,7 +40,10 @@ async def lifespan(app: FastAPI):
         logger.warning("Polling task cancelled. Exiting.")
 
 
-router = APIRouter(lifespan=lambda app: lifespan(app))
+router = APIRouter(
+    lifespan=lambda app: lifespan(app), 
+    dependencies=[Depends(get_api_key)]
+)
 
 
 @router.get("/")

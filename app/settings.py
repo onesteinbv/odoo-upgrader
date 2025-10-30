@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     job_env: Dict[str, str] = {}
     job_secret_env: Dict[str, str] = {}
     job_domain: str
+    api_key: str | None = None
 
     s3: S3Settings
 

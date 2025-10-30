@@ -13,6 +13,13 @@
     </head>
     <body>
         <script type="module">
+            let apiKey = sessionStorage.getItem("api-key");
+
+            if (!apiKey) {
+                apiKey = prompt("API Key");
+                sessionStorage.setItem("api-key", apiKey);
+            }
+
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
 
             class JobList extends LitElement {
@@ -34,7 +41,7 @@
                     super.connectedCallback();
                     this.getJobs().then(jobs => this.jobs = jobs);
 
-                    this.eventSource = new EventSource("/api/v1/events");
+                    this.eventSource = new EventSource(`/api/v1/events?api_key=${apiKey}`);
                     this.eventSource.addEventListener("job:new", this.onNewJob.bind(this));
                     this.eventSource.addEventListener("job:updated", this.onJobUpdated.bind(this));
                     this.eventSource.addEventListener("job:deleted", this.onJobDeleted.bind(this));
@@ -87,7 +94,7 @@
                 }
 
                 async getJobs() {
-                    const res = await fetch("/api/v1/jobs");
+                    const res = await fetch(`/api/v1/jobs?api_key=${apiKey}`);
                     return res.json();
                 }
 
@@ -180,12 +187,12 @@
                 }
 
                 async _deleteJob() {
-                    const res = await fetch(`/api/v1/jobs/${this.job.id}`, { method: "DELETE" });
+                    const res = await fetch(`/api/v1/jobs/${this.job.id}?api_key=${apiKey}`, { method: "DELETE" });
                     return res.json();
                 }
 
                 async _resumeJob() {
-                    const res = await fetch(`/api/v1/jobs/${this.job.id}/resume`, { method: "POST" });
+                    const res = await fetch(`/api/v1/jobs/${this.job.id}/resume?api_key=${apiKey}`, { method: "POST" });
                     return res.json();
                 }
 

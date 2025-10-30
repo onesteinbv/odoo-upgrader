@@ -45,6 +45,8 @@ It's fully configurable using env variables.
 
 `ODOO_UPGRADER_S3`: S3 credentials
 
+`ODOO_UPGRADER_API_KEY`: Authentication key required for most API calls (via `X-API-Key` header or `api_key` in query parameter)
+
 ### Example environment variables
 
 Here you can find an example of available environment variables: [.env.example](.env.example)

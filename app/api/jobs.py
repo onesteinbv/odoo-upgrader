@@ -1,16 +1,17 @@
 
 import json
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 
 from app import k8s
+from ..security import get_api_key
 
 from ..manager import Manager, manager
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_api_key)])
 
 
 @router.post("/")
