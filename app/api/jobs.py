@@ -40,9 +40,11 @@ async def create(
         upgrade_path, dump_file, args
     )
 
+
 @router.delete("/all")
 async def delete_all():
     return await manager.delete_all()
+
 
 @router.delete("/{job_id}")
 async def delete(
@@ -63,6 +65,22 @@ async def get_jobs():
         "suspended": job.suspended,
         "annotations": job.annotations
     } for job in jobs]
+
+
+@router.get("/{job_id}")
+def get_job(job_id: str):
+    job = Manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "id": job.id, 
+        "src_id": job.src_id,
+        "state": job.state,
+        "steps": job.steps,
+        "progress": job.progress,
+        "suspended": job.suspended,
+        "annotations": job.annotations
+    }
 
 
 @router.get("/{step_id}/logs")

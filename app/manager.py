@@ -435,5 +435,10 @@ class Manager:
         with Session() as session:
             return session.query(Job).all()
 
+    @classmethod
+    def get_job(cls, job_id: str) -> Job | None:
+        with Session() as session:
+            return session.query(Job).filter(Job.id == job_id).first()
+
 
 manager = Manager()
