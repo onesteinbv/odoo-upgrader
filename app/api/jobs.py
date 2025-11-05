@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 
-from app import k8s
+from app import k8s, s3
 from ..security import get_api_key
 
 from ..manager import Manager, manager
@@ -52,19 +52,10 @@ async def delete(
 ):
     return await manager.delete_job(job_id)
 
-
 @router.get("/")
 async def get_jobs():
     jobs = Manager.get_jobs()
-    return [{
-        "id": job.id, 
-        "src_id": job.src_id,
-        "state": job.state,
-        "steps": job.steps,
-        "progress": job.progress,
-        "suspended": job.suspended,
-        "annotations": job.annotations
-    } for job in jobs]
+    return [job.to_dto() for job in jobs]
 
 
 @router.get("/{job_id}")
@@ -72,15 +63,7 @@ def get_job(job_id: str):
     job = Manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return {
-        "id": job.id, 
-        "src_id": job.src_id,
-        "state": job.state,
-        "steps": job.steps,
-        "progress": job.progress,
-        "suspended": job.suspended,
-        "annotations": job.annotations
-    }
+    return job.to_dto()
 
 
 @router.get("/{step_id}/logs")
@@ -95,3 +78,25 @@ async def resume(
     job_id: str
 ):
     return await Manager.resume_job(job_id)
+
+
+@router.get("/{job_id}/{step_id}/download/{artifact}")
+async def download_artifact(job_id, step_id, artifact):
+    job = Manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    step = list(filter(lambda s: s.id == step_id, job.steps))
+    if not step:
+        raise HTTPException(status_code=404, detail="Step not found")
+    step = step[0]
+    if artifact not in step.artifacts:
+        raise HTTPException(status_code=404, detail="Artifact not found") 
+
+    paths = step.artifacts[artifact].split("/")
+
+    stream = s3.get(paths[0], "/".join(paths[1:]))
+    return StreamingResponse(
+        stream,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=\"%s\"" % paths[-1]}
+    ) 

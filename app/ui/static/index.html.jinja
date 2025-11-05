@@ -113,6 +113,74 @@
                 }
             }
 
+            class DownloadArtifactButton extends LitElement {
+                static properties = {
+                    stepId: { type: String },
+                    jobId: { type: String },
+                    artifacts: { type: Array, state: true },
+                }
+
+                opened = false;
+
+                                
+                firstUpdated() {
+                    this.menuEl = this.renderRoot.querySelector(".dropdown-menu");
+                    console.log(this.menuEl);
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                async setOpened(opened) {
+                    this.opened = opened;
+                    await this.requestUpdate();
+                    if (this.opened) {
+                        this.menuEl.focus();
+                    }
+                }
+
+                toggleOpened() {
+                    this.setOpened(!this.opened);
+                }
+
+                onDownloadClicked(artifact) {
+                    console.log("Download artifact");
+                    window.open(`/api/v1/jobs/${this.jobId}/${this.stepId}/download/${artifact}?api_key=${apiKey}`);
+                }
+
+                render() {
+                    if (this.artifacts.length == 1) {
+                        return html`
+                            <button aria-haspopup="true" @click="${() => this.onDownloadClicked(this.artifacts[0])}">
+                                <span class="icon">
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                </span>
+                            </button>
+                        `;
+                    }
+                    return html`
+                        <div class="dropdown ${this.opened && "is-active" || ""}">
+                            <div class="dropdown-trigger" @click="${() => this.toggleOpened()}">
+                                <button aria-haspopup="true" aria-controls="dropdown-menu-${this.step_id}">
+                                    <span class="icon">
+                                        <i class="fas fa-download" aria-hidden="true"></i>
+                                    </span>
+                                </button>
+                            </div>
+                            <div class="dropdown-menu" id="dropdown-menu-${this.step_id}" tabindex="0" @focusout="${() => this.setOpened(false)}">
+                                <div class="dropdown-content" role="menu">
+                                    ${this.artifacts.map(
+                                        (artifact) => html`<a @click="${() => this.onDownloadClicked(artifact)}" class="dropdown-item">${artifact}</a>`
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+            }
+
             class StateIcon extends LitElement {
                 static properties = {
                     state: { type: String, state: true }
@@ -236,12 +304,15 @@
                                         <div class="box pt-3 pb-3">
                                             <div class="columns is-mobile is-gapless">
                                                 <div
-                                                    class="column is-11" 
+                                                    class="column is-10" 
                                                     style=";">
                                                         <span>${step.name}</span>
                                                 </div>
 
-                                                <div class="column has-text-centered is-1">
+                                                <div class="column has-text-right is-2">
+                                                    ${step.artifacts.length && 
+                                                        html`<download-artifact-button .jobId=${this.job.id} .stepId=${step.id} .artifacts=${step.artifacts}></download-artifact-button>` || ""
+                                                    }
                                                     <state-icon .state=${step.state}></state-icon>
                                                 </div>
                                             </div>
@@ -302,6 +373,7 @@
             customElements.define("job-list", JobList);
             customElements.define("job-card", JobCard);
             customElements.define("state-icon", StateIcon);
+            customElements.define("download-artifact-button", DownloadArtifactButton);
         </script>
         
         <section class="section">

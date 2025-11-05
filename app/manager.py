@@ -143,7 +143,7 @@ class Manager:
                 Event.put(session, "job:updated", {
                     "id": str(job.id),
                     "state": job.state,
-                    "steps": [step.model_dump() for step in job.steps],
+                    "steps": [step.to_dto() for step in job.steps],
                     "progress": job.progress,
                     "suspended": job.suspended,
                     "annotations": job.annotations
@@ -158,7 +158,7 @@ class Manager:
                     "id": str(job.id),
                     "src_id": str(job.src_id),
                     "state": job.state,
-                    "steps": [step.model_dump() for step in job.steps],
+                    "steps": [step.to_dto() for step in job.steps],
                     "progress": job.progress,
                     "suspended": job.suspended,
                     "annotations": job.annotations

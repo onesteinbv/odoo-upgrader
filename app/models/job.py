@@ -2,6 +2,7 @@ from enum import Enum
 import json
 from typing import Iterable, List, Self
 import uuid
+import logging
 
 from datetime import datetime, UTC
 from pydantic import BaseModel
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from .exceptions import MissingRecord
 from .event import Event
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class State(str, Enum):
@@ -69,6 +72,19 @@ class Step(BaseModel):
     finished_at: float | None = None
     started_at: float | None = None
     args: dict[str, str] = {}
+    artifacts: dict[str, str] = {}  # name, s3 key
+
+    def to_dto(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "state": self.state,
+            "message": self.message,
+            "finished_at": self.finished_at,
+            "started_at": self.started_at,
+            "args": self.args,
+            "artifacts": list(self.artifacts.keys())
+        }
 
 
 class StepListDecorator(TypeDecorator):
@@ -175,6 +191,17 @@ class Job(SQLModel, table=True):
                 if state == State.in_progress and node["type"] == "Suspend":
                     state = not args and State.suspended or State.awaiting
 
+                artifacts = {}
+                if node.get("outputs") and node["outputs"].get("artifacts"):
+                    # Only s3 artifacts are supported for now
+                    for artifact in node["outputs"]["artifacts"]:
+                        if not artifact.get("s3"):
+                            logger.warning("Unsupported artifact type found in node %s: %s", node["id"], artifact["name"])
+                        if artifact["name"] == "main-logs":  # exclude the logs
+                            continue
+                        artifact_bucket = status["artifactRepositoryRef"]["artifactRepository"]["s3"]["bucket"]
+                        artifacts[artifact["name"]] = "%s/%s" % (artifact_bucket, artifact["s3"]["key"])
+
                 step = Step(
                     id=node["id"],
                     name=node["displayName"],
@@ -182,7 +209,8 @@ class Job(SQLModel, table=True):
                     message=node.get("message", None),
                     finished_at=finished_at,
                     started_at=started_at,
-                    args=args
+                    args=args,
+                    artifacts=artifacts
                 )
                 steps.append(step)
         steps.sort(key=lambda x: x.started_at)  # Sort here for convenience
@@ -209,3 +237,14 @@ class Job(SQLModel, table=True):
             steps=steps,
             annotations=other_annotations
         )
+
+    def to_dto(self):
+        return {
+            "id": self.id, 
+            "src_id": self.src_id,
+            "state": self.state,
+            "steps": [step.to_dto() for step in self.steps],
+            "progress": self.progress,
+            "suspended": self.suspended,
+            "annotations": self.annotations
+        }
