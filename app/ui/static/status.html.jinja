@@ -95,12 +95,18 @@
                         <upgrade-progress-bar .job=${this.job}></upgrade-progress-bar>
                         ${this.job.state == "success" && html`
                             <div class="notification is-success mt-4">
-                                <i class="fas fa-check"></i> <b>Upgrade succeeded!</b> Click the button below to download the upgraded database.</div>
+                                <i class="fas fa-check"></i> <b>Upgrade succeeded!</b> Click the button below to download the upgraded database.
+                            </div>
                             <button class="button is-large" @click="${this.onDownloadClicked}">
                                 <span class="icon">
                                     <i class="fas fa-download" aria-hidden="true"></i>
                                 </span>
                             </button>
+                        ` || ""}
+                        ${this.job.state == "failed" && html`
+                            <div class="notification is-danger mt-4">
+                                <i class="fas fa-heart-crack"></i> <b>Upgrade failed</b>
+                            </div>
                         ` || ""}
                     `
                 }
@@ -120,6 +126,10 @@
                     let progress = this.job.progress;
                     if (this.job.state == "failed") {
                         progress = 1;
+                    }
+
+                    if (progress == 0) {
+                        progress = 0.05;
                     }
 
                     return html`
