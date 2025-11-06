@@ -305,7 +305,7 @@ class Manager:
                     })
                 if delete_resources:  # Keep resources for potential resubmission
                     if job.s3_object:
-                        s3.delete(job.s3_object)
+                        await s3.delete(job.s3_object)
                     await k8s.delete_all(job.src_id)
 
     async def new_job(
