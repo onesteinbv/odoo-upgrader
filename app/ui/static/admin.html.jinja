@@ -152,7 +152,7 @@
                 render() {
                     if (this.artifacts.length == 1) {
                         return html`
-                            <button aria-haspopup="true" @click="${() => this.onDownloadClicked(this.artifacts[0])}">
+                            <button @click="${() => this.onDownloadClicked(this.artifacts[0])}">
                                 <span class="icon">
                                     <i class="fas fa-download" aria-hidden="true"></i>
                                 </span>

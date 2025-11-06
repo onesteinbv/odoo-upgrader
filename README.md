@@ -136,6 +136,7 @@ WIP
 
 - Implement concurrent job limit
 - Retry from last checkpoint
+- Automatic deletion and cleanup of finished jobs (after configured days)
 
 ## Known limitations
 

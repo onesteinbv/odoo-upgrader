@@ -21,9 +21,9 @@
             }
 
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';	
-            import { ifDefined } from 'https://esm.sh/lit@3.1.2/directives/if-defined.js';	
+            import { ifDefined } from 'https://esm.sh/lit@3.1.2/directives/if-defined.js';
 
-            class UpgradeProgressBar extends LitElement {
+            class UpgradeProgress extends LitElement {
                 static properties = {
                     progress: {type: Number},
                     state: {type: String},
@@ -54,7 +54,7 @@
                     };
                     this.getJob().then(job => this.job = job);
                 }
-                
+
                 disconnectedCallback() {
                     window.removeEventListener("beforeunload", this._handleUnload);
                     if (this.eventSource) {
@@ -85,13 +85,43 @@
                     return this;
                 }
 
+                onDownloadClicked() {
+                    const stepId = this.job.steps[this.job.steps.length - 1].id;
+                    window.open(`/api/v1/jobs/${this.job.id}/${stepId}/download/result?api_key=${apiKey}`);
+                }
+                
+                render() {
+                    return html`
+                        <upgrade-progress-bar .job=${this.job}></upgrade-progress-bar>
+                        ${this.job.state == "success" && html`
+                            <div class="notification is-success mt-4">
+                                <i class="fas fa-check"></i> <b>Upgrade succeeded!</b> Click the button below to download the upgraded database.</div>
+                            <button class="button is-large" @click="${this.onDownloadClicked}">
+                                <span class="icon">
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                </span>
+                            </button>
+                        ` || ""}
+                    `
+                }
+            }
+
+            class UpgradeProgressBar extends LitElement {
+                static properties = {
+                    job: {state: true}
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
                 render() {
                     const extraClasses = this.getStateClasses();
                     let progress = this.job.progress;
                     if (this.job.state == "failed") {
                         progress = 1;
                     }
-                    
+
                     return html`
                         <progress class="progress is-large ${extraClasses}" value="${ifDefined(["pending", "dispatched"].includes(this.job.state) ? undefined : progress)}" max="1"></progress>
                     `;
@@ -108,6 +138,7 @@
                 }
             };
 
+            customElements.define("upgrade-progress", UpgradeProgress);
             customElements.define("upgrade-progress-bar", UpgradeProgressBar);
         </script>
         <section class="hero is-medium is-primary">
@@ -116,8 +147,8 @@
             </div>
         </section>
         <section class="section">
-            <div class="container">
-                <upgrade-progress-bar jobId="{{ job.id }}" progress="{{ job.progress }}" state="{{ job.state }}"></upgrade-progress-bar>
+            <div class="container has-text-centered">
+                <upgrade-progress jobId="{{ job.id }}" progress="{{ job.progress }}"></upgrade-progress>
             </div>
         </section>
     </body>
