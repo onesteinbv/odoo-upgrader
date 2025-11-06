@@ -36,3 +36,7 @@ async def lifespan(app: FastAPI):
 @app.exception_handler(MissingRecord)
 async def handle_model_exception(request, exc):
     raise HTTPException(status_code=404, detail=str(exc))
+
+@app.exception_handler(ValueError)
+async def handle_value_exception(request, exc):
+    raise HTTPException(status_code=400, detail=str(exc))

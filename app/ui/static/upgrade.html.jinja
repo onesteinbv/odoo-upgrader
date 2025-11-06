@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Upgrade</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css"
+        >
+        <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+    </head>
+    <body>
+        <script type="module">
+            let apiKey = localStorage.getItem("api-key");
+
+            if (!apiKey) {
+                apiKey = prompt("API Key");
+                localStorage.setItem("api-key", apiKey);
+            }
+            
+            import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
+
+            const upgradePath = "{{ upgrade_path }}";
+
+            class UpgradeForm extends LitElement {
+                static properties = {
+                    submitted: {type: Boolean, attribute: false},
+                    error: {type: String, attribute: false},
+                    fileName: {type: String, attribute: false}
+                }
+                createRenderRoot() {
+                    return this;
+                }
+
+                setSubmitted(value) {
+                    this.submitted = value;
+                }
+
+                setFileName(fileName) {
+                    this.fileName = fileName;
+                }
+
+                showError(message) {
+                    this.error = message;
+                }
+
+                async onChangeFile(e) {
+                    if (!e.target.files.length) return;
+                    this.fileName = e.target.files[0].name;
+                }
+
+                async onSubmit(e) {
+                    e.preventDefault();
+                    this.submitted = true;
+
+                    const formData = new FormData(this.querySelector("form"));
+                
+                    const url = `/api/v1/jobs?upgrade_path=${upgradePath}`;
+                    const resp = await fetch(
+                        url, {
+                            method: "POST",
+                            headers: {"X-API-Key": apiKey},
+                            body: formData
+                        }
+                    );
+                        
+
+                    if (!resp.ok) {
+                        if (resp.headers.get("Content-Type") == "application/json") {
+                            this.showError((await resp.json()).detail);
+                        } else {
+                            this.showError(await resp.text());
+                        }
+                        this.submitted = false;
+                        return;
+                    }
+
+                    const jobId = await resp.json();
+                    window.location.href = `/ui/status/${jobId}`
+                }
+
+                render() {
+                    return html`
+                        <form @submit="${this.onSubmit}">
+                            <div class="file is-large is-centered is-boxed ${this.fileName && "has-name" || ""}">
+                                <label class="file-label">
+                                    <div class="control has-icons-left">
+                                        <input class="file-input" type="file" name="file" @change="${this.onChangeFile}" />
+                                    </div>
+                                    <span class="file-cta">
+                                        <span class="file-icon">
+                                            <i class="fas fa-upload"></i>
+                                        </span>
+
+                                        <span class="file-label">Database Dump</span>
+                                    </span>
+                                    ${this.fileName && html`<span class="file-name">${this.fileName}</span>` || ""}
+                                </label>
+                            </div>
+                            <div class="control has-text-centered">
+                            ${this.submitted && html`
+                                <button class="button is-primary is-large is-loading" disabled>
+                                    <span>Loading</span>
+                                </button>
+                            ` || html`
+                                <button class="button is-primary is-large">
+                                    <span class="icon">
+                                        <i class="fas fa-rocket"></i>
+                                    </span>
+                                    <span>Start Upgrade</span>
+                                </button>
+                            `}
+                            </div>
+                        </form>
+                        ${this.error && html`
+                            <div class="notification is-danger mt-4 has-text-centered">
+                                ${this.error}
+                            </div>
+                        ` || ""}
+                    `;
+                }
+            }
+
+            customElements.define("upgrade-form", UpgradeForm);
+        </script>
+        <section class="hero is-medium is-primary">
+            <div class="hero-body has-text-centered">
+                <p class="title">Upgrade</p>
+            </div>
+        </section>
+        <section class="section">
+            <div class="container">
+                <upgrade-form></upgrade-form>
+            </div>
+        </section>
+    </body>
+</html>

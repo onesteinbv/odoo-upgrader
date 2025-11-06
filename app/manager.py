@@ -304,26 +304,29 @@ class Manager:
                         "id": str(job.id)
                     })
                 if delete_resources:  # Keep resources for potential resubmission
-                    if job.dump_object:
-                        s3.delete(job.dump_object)
+                    if job.s3_object:
+                        s3.delete(job.s3_object)
                     await k8s.delete_all(job.src_id)
 
     async def new_job(
             self, 
             upgrade_path: str, 
-            dump_file: bytes | None = None, 
+            file: bytes | None = None, 
             args: dict[str, str] | None = None
         ) -> str:
-        settings.upgrade_path_exists(upgrade_path)
+        # Check whether a file is required for this upgrade path
+        upgrade_path_settings = settings.get_upgrade_path(upgrade_path)
+        if not file and upgrade_path_settings.requires_file:
+            raise ValueError("File is required for this upgrade path.")
 
-        object_key = None
         # Upload dump to s3
-        if dump_file:
+        object_key = None
+        if file:
             object_key = str(uuid.uuid4())
-            await s3.upload(object_key, dump_file)
+            await s3.upload(object_key, file)
 
         # Create a job record and put an event out
-        job = Job(upgrade_path=upgrade_path, dump_object=object_key, args=args)
+        job = Job(upgrade_path=upgrade_path, s3_object=object_key, args=args)
         job.src_id = job.id
         res = None
         with Session.begin() as session:

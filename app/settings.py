@@ -20,6 +20,7 @@ class StepSettings(BaseModel):
 class UpgradePathSettings(BaseModel):
     steps: List[StepSettings]
     manifest_dir: Path
+    requires_file: bool = False
     job_env: Dict[str, str] = {}
     job_secret_env: Dict[str, str] = {}
 
@@ -50,10 +51,10 @@ class Settings(BaseSettings):
 
     s3: S3Settings
 
-    def get_upgrade_path(self, key) -> UpgradePathSettings:
-        if key not in self.upgrade_paths:
+    def get_upgrade_path(self, key, raise_exception=True) -> UpgradePathSettings:
+        if key not in self.upgrade_paths and raise_exception:
             raise NotImplementedError("Upgrade path `%s` not found" % key)
-        return self.upgrade_paths[key]
+        return self.upgrade_paths.get(key)
     
     def upgrade_path_exists(self, key, raise_exception=True):
         exists = key in self.upgrade_paths

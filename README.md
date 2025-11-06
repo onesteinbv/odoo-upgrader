@@ -134,12 +134,8 @@ WIP
 
 ## Roadmap
 
-- Authentication
-- User friendly UI to upload a database, seperation from the admin UI
 - Implement concurrent job limit
 - Retry from last checkpoint
-- Download created artifacts directly using the UI
-- Hyperlink to deployment on UI
 
 ## Known limitations
 

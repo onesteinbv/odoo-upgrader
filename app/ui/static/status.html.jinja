@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Upgrade Status</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css"
+        >
+        <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+    </head>
+    <body>
+        <script type="module">
+            let apiKey = localStorage.getItem("api-key");
+
+            if (!apiKey) {
+                apiKey = prompt("API Key");
+                localStorage.setItem("api-key", apiKey);
+            }
+
+            import { LitElement, html } from 'https://esm.sh/lit@3.1.2';	
+            import { ifDefined } from 'https://esm.sh/lit@3.1.2/directives/if-defined.js';	
+
+            class UpgradeProgressBar extends LitElement {
+                static properties = {
+                    progress: {type: Number},
+                    state: {type: String},
+                    jobId: {type: String},
+                    job: {state: true, attribute: false}
+                }
+
+                constructor() {
+                    super();
+                    this.job = {};
+                    this.eventSource = null;
+                }
+
+                connectedCallback() {
+                    super.connectedCallback();
+                    this.eventSource = new EventSource(`/api/v1/events?api_key=${apiKey}`);
+                    this.eventSource.addEventListener("job:updated", this.onJobUpdated.bind(this));
+                    
+                    window.addEventListener("beforeunload", this._handleUnload);
+                }
+                
+                firstUpdated() {
+                    console.log(this);
+                    this.job = { 
+                        progress: this.progress, 
+                        id: this.jobId,
+                        state: this.state
+                    };
+                    this.getJob().then(job => this.job = job);
+                }
+                
+                disconnectedCallback() {
+                    window.removeEventListener("beforeunload", this._handleUnload);
+                    if (this.eventSource) {
+                        this.eventSource.close();
+                    }
+                    super.disconnectedCallback();
+                }
+
+                _handleUnload() {
+                    if (this.eventSource) {
+                        this.eventSource.close();
+                    }
+                }
+
+                onJobUpdated(e) {
+                    const eventData = JSON.parse(e.data);
+                    if (this.jobId != eventData.id) return;
+                    
+                    this.job = { ...this.job, ...eventData };
+                }
+
+                async getJob() {
+                    const res = await fetch(`/api/v1/jobs/${this.jobId}`, {headers: {"X-API-Key": apiKey}});
+                    return res.json();
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                render() {
+                    const extraClasses = this.getStateClasses();
+                    let progress = this.job.progress;
+                    if (this.job.state == "failed") {
+                        progress = 1;
+                    }
+                    
+                    return html`
+                        <progress class="progress is-large ${extraClasses}" value="${ifDefined(["pending", "dispatched"].includes(this.job.state) ? undefined : progress)}" max="1"></progress>
+                    `;
+                }
+
+                getStateClasses() {
+                    return this.job.state == "pending" && "is-info" 
+                        || this.job.state == "dispatched" && "is-info"
+                        || this.job.state == "in_progress" && "is-primary"
+                        || this.job.state == "failed" && "is-danger"
+                        || this.job.state == "succeeded" && "is-success"
+                        || this.job.state == "suspended" && "is-warning" 
+                        || ""
+                }
+            };
+
+            customElements.define("upgrade-progress-bar", UpgradeProgressBar);
+        </script>
+        <section class="hero is-medium is-primary">
+            <div class="hero-body has-text-centered">
+                <p class="title">Upgrade Status</p>
+            </div>
+        </section>
+        <section class="section">
+            <div class="container">
+                <upgrade-progress-bar jobId="{{ job.id }}" progress="{{ job.progress }}" state="{{ job.state }}"></upgrade-progress-bar>
+            </div>
+        </section>
+    </body>
+</html>

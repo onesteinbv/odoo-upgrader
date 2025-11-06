@@ -17,7 +17,7 @@ router = APIRouter(dependencies=[Depends(get_api_key)])
 @router.post("/")
 async def create(
     upgrade_path: str, 
-    dump_file: UploadFile | None = File(None),
+    file: UploadFile | None = File(None),
     args: dict[str, str] | str | None = None,
 ):
     if isinstance(args, str):  # There should be a better way to do this with FastAPI
@@ -33,11 +33,11 @@ async def create(
             if not isinstance(v, str):
                 raise RequestValidationError("All args values must be strings")
 
-    if dump_file:
-        dump_file = dump_file.file.read()
+    if file:
+        file = file.file.read()
 
     return await manager.new_job(
-        upgrade_path, dump_file, args
+        upgrade_path, file, args
     )
 
 

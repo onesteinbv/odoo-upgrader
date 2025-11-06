@@ -111,7 +111,7 @@ class Job(SQLModel, table=True):
     updated_date: datetime | None = Field(default=None)
     state: State = Field(default=State.pending)
 
-    dump_object: str | None
+    s3_object: str | None
     upgrade_path: str | None
     steps: List[Step] = Field(default_factory=list, sa_column=Column(StepListDecorator))
     src_id: str | None
@@ -232,7 +232,7 @@ class Job(SQLModel, table=True):
             src_id=labels["odoo-upgrader/src-id"],
             creation_date=datetime.strptime(metadata["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ"),
             state=job_state,
-            dump_object=annotations["odoo-upgrader/dump-object"],
+            s3_object=annotations.get("odoo-upgrader/s3-object"),
             upgrade_path=annotations["odoo-upgrader/upgrade-path"],
             steps=steps,
             annotations=other_annotations

@@ -44,7 +44,7 @@ spec:
             s3:
               endpoint: {{ s3.endpoint }}
               bucket: "{{ s3.bucket }}"
-              key: "{{ job.dump_object }}"
+              key: "{{ job.s3_object }}"
               accessKeySecret:
                 name: "{{ job.id }}-s3-credentials"
                 key: accessKey

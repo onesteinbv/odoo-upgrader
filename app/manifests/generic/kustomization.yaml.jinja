@@ -4,7 +4,7 @@ resources:
 namespace: "{{ namespace }}"
 
 commonAnnotations:
-  odoo-upgrader/dump-object: "{{ job.dump_object or '' }}"
+  odoo-upgrader/s3-object: "{{ job.s3_object or '' }}"
   odoo-upgrader/upgrade-path: "{{ job.upgrade_path }}"
 
 labels:
