@@ -144,7 +144,7 @@
                 getStateClasses() {
                     return this.job.state == "pending" && "is-info" 
                         || this.job.state == "dispatched" && "is-info"
-                        || this.job.state == "in_progress" && "is-primary"
+                        || this.job.state == "in_progress" && "is-info"
                         || this.job.state == "failed" && "is-danger"
                         || this.job.state == "succeeded" && "is-success"
                         || this.job.state == "suspended" && "is-warning" 
@@ -169,7 +169,7 @@
                             ` || this.state == "dispatched" && html`
                                 <i class="fas fa-circle has-text-info" aria-hidden="true"></i>
                             ` || this.state == "in_progress" && html`
-                                <i class="fas fa-circle-notch fa-spin has-text-primary" aria-hidden="true"></i>
+                                <i class="fas fa-circle-notch fa-spin has-text-info" aria-hidden="true"></i>
                             ` || this.state == "failed" && html`
                                 <i class="fas fa-circle has-text-danger" aria-hidden="true"></i>
                             ` || this.state == "succeeded" && html`
@@ -187,7 +187,7 @@
             customElements.define("upgrade-progress", UpgradeProgress);
             customElements.define("upgrade-progress-bar", UpgradeProgressBar);
         </script>
-        <section class="hero is-medium is-primary">
+        <section class="hero is-dark">
             <div class="hero-body has-text-centered">
                 <p class="title">Upgrade Status</p>
             </div>
