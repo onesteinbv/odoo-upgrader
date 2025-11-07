@@ -7,10 +7,13 @@ Odoo Upgrader is a tool for end-to-end upgrades from one Odoo major version to a
 - Support for manual intervention
 - Upgrade from file or target (running Odoo instance)
 - Replay manual changes (website pages and blog posts)
-- Web UI (/ui)
+- Job dashboard (/ui/admin)
 - REST API with interactive documentation (/docs)
+- User interface for starting a new job (/ui/upgrade)
 
 <img src="docs/images/upgrade-path.png" alt="upgrade path" width="45%" />  <img src="docs/images/logs.png" alt="logs" width="45%" />
+
+<img src="docs/images/upgrade.png" alt="upgrade form" width="30%" />  <img src="docs/images/upgrade-status.png" alt="upgrade status" width="30%" />  <img src="docs/images/upgrade-finished.png" alt="upgrade finished" width="30%" />
 
 ## Setup
 

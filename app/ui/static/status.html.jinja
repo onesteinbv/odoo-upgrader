@@ -46,7 +46,6 @@
                 }
                 
                 firstUpdated() {
-                    console.log(this);
                     this.job = { 
                         progress: this.progress, 
                         id: this.jobId,
@@ -86,14 +85,19 @@
                 }
 
                 onDownloadClicked() {
-                    const stepId = this.job.steps[this.job.steps.length - 1].id;
+                    const withArtifacts = this.job.steps.filter(s => s.artifacts.length);
+                    console.log(withArtifacts);
+                    const stepId = withArtifacts[withArtifacts.length - 1].id;
                     window.open(`/api/v1/jobs/${this.job.id}/${stepId}/download/result?api_key=${apiKey}`);
                 }
                 
                 render() {
                     return html`
-                        <upgrade-progress-bar .job=${this.job}></upgrade-progress-bar>
-                        ${this.job.state == "success" && html`
+                        <div class="is-flex is-align-items-center">
+                            <div class="is-flex-grow-1"><upgrade-progress-bar .job=${this.job}></upgrade-progress-bar></div>
+                            <div><state-icon .state=${this.job.state}></state-icon></div>
+                        </div>
+                        ${this.job.state == "succeeded" && html`
                             <div class="notification is-success mt-4">
                                 <i class="fas fa-check"></i> <b>Upgrade succeeded!</b> Click the button below to download the upgraded database.
                             </div>
@@ -129,7 +133,7 @@
                     }
 
                     if (progress == 0) {
-                        progress = 0.05;
+                        progress = 0.01;
                     }
 
                     return html`
@@ -148,6 +152,38 @@
                 }
             };
 
+            class StateIcon extends LitElement {
+                static properties = {
+                    state: { type: String, state: true }
+                }
+
+                createRenderRoot() {
+                    return this;
+                }
+
+                render() {
+                    return html`
+                        <span class="icon is-large">
+                            ${this.state == "pending" && html`
+                                <i class="fas fa-circle has-text-info" aria-hidden="true"></i>
+                            ` || this.state == "dispatched" && html`
+                                <i class="fas fa-circle has-text-info" aria-hidden="true"></i>
+                            ` || this.state == "in_progress" && html`
+                                <i class="fas fa-circle-notch fa-spin has-text-primary" aria-hidden="true"></i>
+                            ` || this.state == "failed" && html`
+                                <i class="fas fa-circle has-text-danger" aria-hidden="true"></i>
+                            ` || this.state == "succeeded" && html`
+                                <i class="fas fa-circle has-text-success" aria-hidden="true"></i>
+                            ` || this.state == "suspended" && html`
+                                <i class="fas fa-pause has-text-warning" aria-hidden="true"></i>
+                            `}
+                        </span>
+                    `;
+                }
+            }
+
+
+            customElements.define("state-icon", StateIcon);
             customElements.define("upgrade-progress", UpgradeProgress);
             customElements.define("upgrade-progress-bar", UpgradeProgressBar);
         </script>
