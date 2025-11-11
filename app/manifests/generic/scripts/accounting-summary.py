@@ -23,12 +23,14 @@ def main(env, digest):
         click.echo("Module 'account' is not installed, exiting...")
         return
 
-    per_account = env["account.move.line"].read_group([], ["debit", "credit"], ["account_id"], orderby="account_id")
-    per_partner = env["account.move.line"].read_group([], ["debit", "credit"], ["partner_id"], orderby="partner_id")
-    per_journal = env["account.move.line"].read_group([], ["debit", "credit"], ["journal_id"], orderby="journal_id")
-    per_matching_number = env["account.move.line"].read_group([], ["debit", "credit"], ["matching_number"], orderby="matching_number")
-    per_date = env["account.move.line"].read_group([], ["debit", "credit"], ["date:month"], orderby="date")
-    analytic_lines = env["account.analytic.line"].read_group([], ["amount"], ["account_id"], orderby="account_id")
+    move_line_sudo = env["account.move.line"].sudo()
+    analytic_line_sudo = env["account.analytic.line"].sudo()
+    per_account = move_line_sudo.read_group([], ["debit", "credit"], ["account_id"])
+    per_partner = move_line_sudo.read_group([], ["debit", "credit"], ["partner_id"])
+    per_journal = move_line_sudo.read_group([], ["debit", "credit"], ["journal_id"])
+    per_matching_number = move_line_sudo.read_group([], ["debit", "credit"], ["matching_number"], orderby="matching_number")
+    per_date = move_line_sudo.read_group([], ["debit", "credit"], ["date:month"], orderby="date")
+    analytic_lines = analytic_line_sudo.read_group([], ["amount"], ["account_id"])
     
     def _to_summary(line, group_field, fields):
         count_key = "%s_count" % group_field if ":" not in group_field else group_field.split(":")[0] + "_count"
@@ -45,13 +47,16 @@ def main(env, digest):
             field: line[field] for field in fields
         }}
     
+    def _order_by_id(lines):
+        return list(sorted(lines, key=lambda l: l["id"]))
+        
     data = {
-        "per_account": [_to_summary(line, "account_id", ["debit", "credit"]) for line in per_account],
-        "per_partner": [_to_summary(line, "partner_id", ["debit", "credit"]) for line in per_partner],
-        "per_journal": [_to_summary(line, "journal_id", ["debit", "credit"]) for line in per_journal],
+        "per_account": _order_by_id([_to_summary(line, "account_id", ["debit", "credit"]) for line in per_account]),
+        "per_partner": _order_by_id([_to_summary(line, "partner_id", ["debit", "credit"]) for line in per_partner]),
+        "per_journal": _order_by_id([_to_summary(line, "journal_id", ["debit", "credit"]) for line in per_journal]),
         "per_matching_number": [_to_summary(line, "matching_number", ["debit", "credit"]) for line in per_matching_number],
         "per_date": [_to_summary(line, "date:month", ["debit", "credit"]) for line in per_date],
-        "analytic_lines": [_to_summary(line, "account_id", ["amount"]) for line in analytic_lines]
+        "analytic_lines": _order_by_id([_to_summary(line, "account_id", ["amount"]) for line in analytic_lines])
     }
 
     hexdigest = sha256(json.dumps(data).encode()).hexdigest()
