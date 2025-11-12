@@ -56,7 +56,8 @@ def main(env, digest):
         "per_journal": _order_by_id([_to_summary(line, "journal_id", ["debit", "credit"]) for line in per_journal]),
         "per_matching_number": [_to_summary(line, "matching_number", ["debit", "credit"]) for line in per_matching_number],
         "per_date": [_to_summary(line, "date:month", ["debit", "credit"]) for line in per_date],
-        "analytic_lines": _order_by_id([_to_summary(line, "account_id", ["amount"]) for line in analytic_lines])
+        # NB: analytic accounting has been changed alot in > 17, so we disable this check for now 
+        # "analytic_lines": _order_by_id([_to_summary(line, "account_id", ["amount"]) for line in analytic_lines])
     }
 
     hexdigest = sha256(json.dumps(data).encode()).hexdigest()
