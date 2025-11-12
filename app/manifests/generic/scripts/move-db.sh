@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 mkdir /opt/ou/out
 
@@ -11,7 +11,7 @@ else
 fi
 
 (
-    set -e
+    set -ex
     export PGHOST=$TARGET_PGHOST
     export PGPORT=$TARGET_PGPORT
     export PGUSER=$TARGET_PGUSER
@@ -19,7 +19,11 @@ fi
     export PGDATABASE=$TARGET_PGDATABASE
 
     envsubst < odoo.cfg.tpl > odoo.cfg
-    click-odoo-dropdb -c "odoo.cfg" --if-exists "$PGDATABASE"
+    if [ -n "$FILESTORE" ] && [ "$FILESTORE" = "true" ]; then
+        click-odoo-dropdb -c "odoo.cfg" --if-exists "$PGDATABASE"
+    else
+        dropdb --force --if-exists "$PGDATABASE"
+    fi
     click-odoo-restoredb -c "odoo.cfg" "$PGDATABASE" "/opt/ou/out/result.zip"
 
     if [ -n "$CHOWN" ]; then
