@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, UTC
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, TypeDecorator
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, delete
 from sqlalchemy.orm import Session
 
 from .exceptions import MissingRecord
@@ -158,6 +158,11 @@ class Job(SQLModel, table=True):
     @classmethod
     def get_by_states(cls, session: Session, states: Iterable[State]) -> List[Self]:
         return session.query(cls).filter(cls.state.in_(states)).all()
+    
+    @classmethod
+    def truncate(cls, session: Session):
+        delete_statement = delete(cls)
+        session.execute(delete_statement)
 
     @classmethod
     def from_k8s_object(cls, k8s_object: dict) -> Self:

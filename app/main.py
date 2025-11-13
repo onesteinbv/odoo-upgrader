@@ -7,7 +7,7 @@ from .models.exceptions import MissingRecord
 
 from .k8s import load_kube_config
 from .models import db
-from .api import events, jobs, status
+from .api import events, jobs, status, users
 from .ui import router as ui
 from .manager import manager
 
@@ -18,6 +18,7 @@ app = FastAPI(lifespan=lambda app: lifespan(app))
 app.include_router(status.router, prefix="/status")
 app.include_router(events.router, prefix="/api/v1/events")
 app.include_router(jobs.router, prefix="/api/v1/jobs")
+app.include_router(users.router, prefix="/api/v1/users")
 app.include_router(ui.router, prefix="/ui")
 
 

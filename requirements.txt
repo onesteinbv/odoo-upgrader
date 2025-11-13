@@ -10,3 +10,5 @@ Jinja2==3.1.6
 boto3==1.35.81
 aioboto3==13.3.0
 psycopg2==2.9.10
+passlib==1.7.4
+argon2-cffi==25.1.0

@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, UTC
 from typing import Dict, Optional, Self
 import uuid
-from sqlalchemy import Column, asc
+from sqlalchemy import Column, asc, delete
 from sqlmodel import SQLModel, Field, JSON
 from sqlalchemy.orm import Session
 
@@ -27,3 +27,8 @@ class Event(SQLModel, table=True):
             session.delete(event)
             return event
         return None
+
+    @classmethod
+    def truncate(cls, session: Session):
+        delete_statement = delete(cls)
+        session.execute(delete_statement)
