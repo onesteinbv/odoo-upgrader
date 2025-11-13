@@ -14,10 +14,11 @@ class Event(SQLModel, table=True):
     )
     key: str
     data: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+    user_id: uuid.UUID | None = None
 
     @classmethod
-    def put(cls, session: Session, key: str, data: dict):
-        event = Event(key=key, data=data)
+    def put(cls, session: Session, key: str, data: dict, user_id: uuid.UUID | None = None):
+        event = Event(key=key, data=data, user_id=user_id)
         session.add(event)
 
     @classmethod

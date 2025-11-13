@@ -13,13 +13,6 @@
     </head>
     <body>
         <script type="module">
-            let apiKey = localStorage.getItem("api-key");
-
-            if (!apiKey) {
-                apiKey = prompt("API Key");
-                localStorage.setItem("api-key", apiKey);
-            }
-
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';	
             import { ifDefined } from 'https://esm.sh/lit@3.1.2/directives/if-defined.js';
 
@@ -39,7 +32,7 @@
 
                 connectedCallback() {
                     super.connectedCallback();
-                    this.eventSource = new EventSource(`/api/v1/events?api_key=${apiKey}`);
+                    this.eventSource = new EventSource(`/api/v1/events`);
                     this.eventSource.addEventListener("job:updated", this.onJobUpdated.bind(this));
                     
                     window.addEventListener("beforeunload", this._handleUnload);
@@ -76,7 +69,7 @@
                 }
 
                 async getJob() {
-                    const res = await fetch(`/api/v1/jobs/${this.jobId}`, {headers: {"X-API-Key": apiKey}});
+                    const res = await fetch(`/api/v1/jobs/${this.jobId}`);
                     return res.json();
                 }
 
@@ -88,7 +81,7 @@
                     const withArtifacts = this.job.steps.filter(s => s.artifacts.length);
                     console.log(withArtifacts);
                     const stepId = withArtifacts[withArtifacts.length - 1].id;
-                    window.open(`/api/v1/jobs/${this.job.id}/${stepId}/download/result?api_key=${apiKey}`);
+                    window.open(`/api/v1/jobs/${this.job.id}/${stepId}/download/result`);
                 }
                 
                 render() {

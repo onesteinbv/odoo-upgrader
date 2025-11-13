@@ -48,7 +48,7 @@ It's fully configurable using env variables.
 
 `ODOO_UPGRADER_S3`: S3 credentials
 
-`ODOO_UPGRADER_API_KEY`: Authentication key required for most API calls (via `X-API-Key` header or `api_key` in query parameter)
+`ODOO_UPGRADER_ADMIN_PASSWORD`: Master authentication password required to access all objects (via `basic access authentication`)
 
 ### Example environment variables
 

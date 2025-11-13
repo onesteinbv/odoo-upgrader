@@ -6,6 +6,7 @@ namespace: "{{ namespace }}"
 commonAnnotations:
   odoo-upgrader/s3-object: "{{ job.s3_object or '' }}"
   odoo-upgrader/upgrade-path: "{{ job.upgrade_path }}"
+  odoo-upgrader/user-id:  "{{ job.user_id or '' }}"
 
 labels:
   - includeSelectors: true

@@ -1,3 +1,4 @@
+from typing import Self
 import uuid
 import secrets
 from passlib.hash import argon2
@@ -33,9 +34,9 @@ class User(SQLModel, table=True):
         return user
     
     @classmethod
-    def get_by_name(cls, session: Session, name: str):
+    def get_by_name(cls, session: Session, name: str, raise_exception=True):
         user = session.query(cls).where(User.name == name).one_or_none()
-        if not user:
+        if not user and raise_exception:
             raise MissingRecord("User `{name}` not found")
         return user
 
@@ -49,8 +50,18 @@ class User(SQLModel, table=True):
         session.add(user)
         return password
 
-    def create_new_password(self, session: Session):
+    def create_new_password(self, session: Session) -> str:
         password = secrets.token_urlsafe(128)
         self.password = password
         session.add(self)
         return password
+
+    @classmethod
+    def verify(cls, session: Session, name: str, password: str) -> Self | None:
+        """ Validates the password and if it's correct return the User object. """
+        user = cls.get_by_name(session, name, raise_exception=False)
+        if not user:
+            return None
+        if argon2.verify(password, user.password):
+            return user
+        return None

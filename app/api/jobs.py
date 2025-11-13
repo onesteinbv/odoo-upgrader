@@ -1,17 +1,20 @@
 
 import json
+import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 from app import k8s, s3
-from ..security import get_api_key
+from ..models.job import Job
+from ..models.db import Session
+from ..security import user_auth, admin_auth
 
 from ..manager import Manager, manager
 
-
-router = APIRouter(dependencies=[Depends(get_api_key)])
+router = APIRouter()
 
 
 @router.post("/")
@@ -19,6 +22,7 @@ async def create(
     upgrade_path: str, 
     file: UploadFile | None = File(None),
     args: dict[str, str] | str | None = None,
+    user_id: uuid.UUID | None = Depends(user_auth)
 ):
     if isinstance(args, str):  # There should be a better way to do this with FastAPI
         try:
@@ -37,11 +41,11 @@ async def create(
         file = file.file.read()
 
     return await manager.new_job(
-        upgrade_path, file, args
+        upgrade_path, file, user_id, args
     )
 
 
-@router.delete("/all")
+@router.delete("/all", dependencies=[Depends(admin_auth)])
 async def delete_all():
     return await manager.delete_all()
 
@@ -52,45 +56,69 @@ async def delete(
 ):
     return await manager.delete_job(job_id)
 
+
 @router.get("/")
-async def get_jobs():
-    jobs = Manager.get_jobs()
+async def get_jobs(user_id: uuid.UUID | None = Depends(user_auth)):
+    with Session() as session:
+        jobs = Job.get_all(session, user_id)
     return [job.to_dto() for job in jobs]
 
 
 @router.get("/{job_id}")
-def get_job(job_id: str):
-    job = Manager.get_job(job_id)
+def get_job(job_id: str, user_id: uuid.UUID | None = Depends(user_auth)):
+    with Session() as session:
+        return Job.get_by_id(session, job_id, False)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
+    if user_id and job.user_id != user_id:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Access denied")
     return job.to_dto()
 
 
-@router.get("/{step_id}/logs")
+@router.get("/{job_id}/{step_id}/logs")
 async def logs(
-    step_id: str
+    job_id: str,
+    step_id: str,
+    user_id: uuid.UUID | None = Depends(user_auth)
 ) -> StreamingResponse:
-    return StreamingResponse(k8s.logs(step_id))    
+    with Session() as session:
+        job = Job.get_by_id(session, job_id, False)
+    if not job:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
+    if user_id and job.user_id != user_id:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Access denied")
+    step = list(filter(lambda s: s.id == step_id, job.steps))
+    if not step:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Step not found")
+
+    return StreamingResponse(k8s.logs(step_id))
 
 
 @router.post("/{job_id}/resume")
 async def resume(
-    job_id: str
+    job_id: str, user_id: uuid.UUID | None = Depends(user_auth)
 ):
+    job = Manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
+    if user_id and job.user_id != user_id:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Access denied")
     return await Manager.resume_job(job_id)
 
 
 @router.get("/{job_id}/{step_id}/download/{artifact}")
-async def download_artifact(job_id, step_id, artifact):
+async def download_artifact(job_id, step_id, artifact, user_id: uuid.UUID | None = Depends(user_auth)):
     job = Manager.get_job(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
+    if user_id and job.user_id != user_id:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Access denied")
     step = list(filter(lambda s: s.id == step_id, job.steps))
     if not step:
-        raise HTTPException(status_code=404, detail="Step not found")
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Step not found")
     step = step[0]
     if artifact not in step.artifacts:
-        raise HTTPException(status_code=404, detail="Artifact not found") 
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Artifact not found") 
 
     paths = step.artifacts[artifact].split("/")
 

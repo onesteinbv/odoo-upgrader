@@ -3,10 +3,11 @@ import logging
 import json
 from contextlib import asynccontextmanager
 from typing import List
+import uuid
 from fastapi import APIRouter, FastAPI, Request, Depends
 from sse_starlette import EventSourceResponse as EventSourceResponseBase
 
-from ..security import get_api_key
+from ..security import user_auth
 
 from ..models.event import Event
 from ..models.db import Session
@@ -41,13 +42,12 @@ async def lifespan(app: FastAPI):
 
 
 router = APIRouter(
-    lifespan=lambda app: lifespan(app), 
-    dependencies=[Depends(get_api_key)]
+    lifespan=lambda app: lifespan(app)
 )
 
 
 @router.get("/")
-async def feed(request: Request):
+async def feed(request: Request, user_id: uuid.UUID | None = Depends(user_auth)):
     queue: asyncio.Queue = asyncio.Queue[dict]()
     async with lock:
         subscribers.append(queue)
@@ -56,6 +56,10 @@ async def feed(request: Request):
         while not await request.is_disconnected():
             try:
                 event = await queue.get()
+                event_user_id = event.pop("user_id", None)
+                if user_id and event_user_id and event_user_id != user_id:
+                    queue.task_done()
+                    continue
             except asyncio.CancelledError:
                 break
             yield event
@@ -63,10 +67,10 @@ async def feed(request: Request):
     return EventSourceResponse(queue, _generator())
 
     
-async def _broadcast(data: str, event: str = None):
+async def _broadcast(data: str, event: str = None, user_id: uuid.UUID | None = None):
     async with lock:
         for subscriber in subscribers:
-            await subscriber.put(dict(data=json.dumps(data), event=event))
+            await subscriber.put(dict(data=json.dumps(data), event=event, user_id=user_id))
 
 async def _poll():
     while True:
@@ -74,7 +78,7 @@ async def _poll():
             with Session.begin() as session:
                 event = Event.pop(session)
                 if event:
-                    await _broadcast(event.data, event.key)
+                    await _broadcast(event.data, event.key, event.user_id)
                 else:
                     await asyncio.sleep(.1)
         except asyncio.CancelledError:

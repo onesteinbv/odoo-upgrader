@@ -13,13 +13,6 @@
     </head>
     <body>
         <script type="module">
-            let apiKey = localStorage.getItem("api-key");
-
-            if (!apiKey) {
-                apiKey = prompt("API Key");
-                localStorage.setItem("api-key", apiKey);
-            }
-
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
 
             const jobId = "{{ job.id }}";
@@ -74,7 +67,7 @@
                 }
 
                 async * _read(signal) {
-                    const resp = await fetch(`/api/v1/jobs/${this.selection}/logs?api_key=${apiKey}`, { signal });
+                    const resp = await fetch(`/api/v1/jobs/${jobId}/${this.selection}/logs`, { signal });
                     const decoder = new TextDecoder();
                     let buffer;
                     

@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from ..models.db import Session
 from ..models.user import User
 
-from ..security import get_api_key
+from ..security import admin_auth
 
 
-router = APIRouter(dependencies=[Depends(get_api_key)])
+router = APIRouter(dependencies=[Depends(admin_auth)])
 
 
 @router.get("/all")
@@ -21,6 +21,9 @@ async def get_all():
 async def create(
     name: str,
 ):
+    if name == "admin":
+        raise ValueError("name cannot be `admin`")
+
     with Session.begin() as session:
         return User.create(session, name)
 

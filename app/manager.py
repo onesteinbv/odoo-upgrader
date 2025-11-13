@@ -311,7 +311,8 @@ class Manager:
     async def new_job(
             self, 
             upgrade_path: str, 
-            file: bytes | None = None, 
+            file: bytes | None = None,
+            user_id: uuid.UUID | None = None,
             args: dict[str, str] | None = None
         ) -> str:
         # Check whether a file is required for this upgrade path
@@ -326,7 +327,7 @@ class Manager:
             await s3.upload(object_key, file)
 
         # Create a job record and put an event out
-        job = Job(upgrade_path=upgrade_path, s3_object=object_key, args=args)
+        job = Job(upgrade_path=upgrade_path, s3_object=object_key, user_id=user_id, args=args)
         job.src_id = job.id
         res = None
         with Session.begin() as session:
@@ -432,16 +433,6 @@ class Manager:
             if not job.suspended:
                 raise Exception("Job `{job_id}` is not suspended")
         await argo.resume(job_id)
-
-    @classmethod
-    def get_jobs(cls):
-        with Session() as session:
-            return session.query(Job).all()
-
-    @classmethod
-    def get_job(cls, job_id: str) -> Job | None:
-        with Session() as session:
-            return session.query(Job).filter(Job.id == job_id).first()
 
 
 manager = Manager()

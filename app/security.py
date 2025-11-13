@@ -1,20 +1,70 @@
 
+import uuid
 from fastapi import HTTPException
 from fastapi.params import Security
-from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
-from starlette.status import HTTP_403_FORBIDDEN
+from fastapi.security.http import HTTPBasic, HTTPBasicCredentials
+from starlette.status import HTTP_401_UNAUTHORIZED
+
+from .models.db import Session
+from .models.user import User
 
 from .settings import settings
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-api_key_query = APIKeyQuery(name="api_key", auto_error=False)
+http_basic_auth = HTTPBasic(auto_error=False)
 
-def get_api_key(
-    api_key_from_header: str = Security(api_key_header), 
-    api_key_from_query: str = Security(api_key_query)
+def admin_auth(
+    http_credentials: HTTPBasicCredentials = Security(http_basic_auth), 
 ):
-    """ Get api key from header or query parameter and validate it. """
-    api_key = api_key_from_header or api_key_from_query
-    if settings.api_key and api_key != settings.api_key:
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials")
-    return api_key
+    if not http_credentials:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, 
+            detail="No credentials provided", 
+            headers={"WWW-Authenticate": "Basic"}
+        )
+    """ Admin only authentication. """
+    if http_credentials.username != "admin":
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, 
+            detail="Could not validate credentials", 
+            headers={"WWW-Authenticate": "Basic"})
+
+    if http_credentials.password != settings.admin_password:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials", 
+            headers={"WWW-Authenticate": "Basic"}
+        )
+
+
+def user_auth(
+    http_credentials: HTTPBasicCredentials = Security(http_basic_auth)
+) -> uuid.UUID | None:
+    """ Allow admin and user login """
+    if not http_credentials:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, 
+            detail="No credentials provided", 
+            headers={"WWW-Authenticate": "Basic"}
+        )
+    if http_credentials.username == "admin":
+        if http_credentials.password != settings.admin_password:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials", 
+                headers={"WWW-Authenticate": "Basic"}
+            )
+        return None
+        
+    with Session() as session:
+        user = User.verify(
+            session,
+            http_credentials.username, 
+            http_credentials.password
+        )
+        if not user:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, 
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Basic"}
+            )
+    return user.id

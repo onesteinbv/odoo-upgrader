@@ -117,6 +117,7 @@ class Job(SQLModel, table=True):
     src_id: str | None
     args: dict[str, str] | None = Field(sa_type=JSON)
     annotations: dict[str, str] | None = Field(sa_type=JSON)
+    user_id: uuid.UUID | None  # This is simpler than using a relationship
 
     @property
     def progress(self) -> float:
@@ -137,8 +138,11 @@ class Job(SQLModel, table=True):
         )
     
     @classmethod
-    def get_all(cls, session: Session) -> List[Self]:
-        return session.query(cls).all()
+    def get_all(cls, session: Session, user_id: uuid.UUID | None) -> List[Self]:
+        statement = session.query(cls)
+        if user_id:
+            statement = statement.where(Job.user_id == user_id)
+        return statement.all()
 
     @classmethod
     def get_by_id(cls, session: Session, job_id: str, raise_exception=True) -> Self | None:
@@ -219,6 +223,7 @@ class Job(SQLModel, table=True):
                 )
                 steps.append(step)
         steps.sort(key=lambda x: x.started_at)  # Sort here for convenience
+
         job_state = State.from_k8s_phase(status["phase"])
         if annotations.get("odoo-upgrader/cleanup-state"):
             job_state = State.from_cleanup_state_annotation(
@@ -232,6 +237,10 @@ class Job(SQLModel, table=True):
                 other_annotations.pop(key)
         
         job_id = metadata["name"]
+        user_id = None
+        if "odoo-upgrader/user-id" in annotations and annotations["odoo-upgrader/user-id"]:
+            user_id = uuid.UUID(annotations["odoo-upgrader/user-id"])
+    
         return cls(
             id=job_id,
             src_id=labels["odoo-upgrader/src-id"],
@@ -240,6 +249,7 @@ class Job(SQLModel, table=True):
             s3_object=annotations.get("odoo-upgrader/s3-object"),
             upgrade_path=annotations["odoo-upgrader/upgrade-path"],
             steps=steps,
+            user_id=user_id,
             annotations=other_annotations
         )
 
