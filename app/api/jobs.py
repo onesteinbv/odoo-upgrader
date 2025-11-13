@@ -67,7 +67,7 @@ async def get_jobs(user_id: uuid.UUID | None = Depends(user_auth)):
 @router.get("/{job_id}")
 def get_job(job_id: str, user_id: uuid.UUID | None = Depends(user_auth)):
     with Session() as session:
-        return Job.get_by_id(session, job_id, False)
+        job = Job.get_by_id(session, job_id, False)
     if not job:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
     if user_id and job.user_id != user_id:
@@ -75,18 +75,15 @@ def get_job(job_id: str, user_id: uuid.UUID | None = Depends(user_auth)):
     return job.to_dto()
 
 
-@router.get("/{job_id}/{step_id}/logs")
+@router.get("/{job_id}/{step_id}/logs", dependencies=[Depends(admin_auth)])
 async def logs(
     job_id: str,
-    step_id: str,
-    user_id: uuid.UUID | None = Depends(user_auth)
+    step_id: str
 ) -> StreamingResponse:
     with Session() as session:
         job = Job.get_by_id(session, job_id, False)
     if not job:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
-    if user_id and job.user_id != user_id:
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Access denied")
     step = list(filter(lambda s: s.id == step_id, job.steps))
     if not step:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Step not found")
@@ -98,7 +95,8 @@ async def logs(
 async def resume(
     job_id: str, user_id: uuid.UUID | None = Depends(user_auth)
 ):
-    job = Manager.get_job(job_id)
+    with Session() as session:
+        job = Job.get_by_id(session, job_id, False)
     if not job:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
     if user_id and job.user_id != user_id:
@@ -108,7 +106,8 @@ async def resume(
 
 @router.get("/{job_id}/{step_id}/download/{artifact}")
 async def download_artifact(job_id, step_id, artifact, user_id: uuid.UUID | None = Depends(user_auth)):
-    job = Manager.get_job(job_id)
+    with Session() as session:
+        job = Job.get_by_id(session, job_id, False)
     if not job:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Job not found")
     if user_id and job.user_id != user_id:

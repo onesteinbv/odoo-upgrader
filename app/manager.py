@@ -147,7 +147,7 @@ class Manager:
                     "progress": job.progress,
                     "suspended": job.suspended,
                     "annotations": job.annotations
-                })
+                }, job.user_id)
                 job_awaiting = job.awaiting
             else:
                 previous_state = State.pending
@@ -162,7 +162,7 @@ class Manager:
                     "progress": job.progress,
                     "suspended": job.suspended,
                     "annotations": job.annotations
-                })
+                }, job.user_id)
 
         if job_awaiting:
             self._dispatcher_event.set()
@@ -234,7 +234,7 @@ class Manager:
                         Event.put(session, "job:updated", {
                             "id": str(job.id),
                             "state": job.state
-                        })
+                        }, job.user_id)
                 except Exception as e:
                     logger.error("Failed to deploy job `%s`: %s", job.id, e)
                     with Session.begin() as session:
@@ -243,7 +243,7 @@ class Manager:
                         Event.put(session, "job:updated", {
                             "id": str(job.id),
                             "state": job.state
-                        })
+                        }, job.user_id)
             for job in awaiting_jobs:
                 try:
                     last_step = job.steps[-1]
@@ -260,7 +260,7 @@ class Manager:
                         Event.put(session, "job:updated", {
                             "id": str(job.id),
                             "state": job.state
-                        })
+                        }, job.user_id)
     
     async def _cleaner(self):
         while True:
@@ -284,7 +284,7 @@ class Manager:
                         Event.put(session, "job:updated", {
                             "id": str(job.id),
                             "state": job.state
-                        })
+                        }, job.user_id)
                 except Exception as e:
                     logger.error("Failed to cleanup job `%s`: %s", job.id, e)
                     with Session.begin() as session:
@@ -293,7 +293,7 @@ class Manager:
                         Event.put(session, "job:updated", {
                             "id": str(job.id),
                             "state": job.state
-                        })
+                        }, job.user_id)
     
             for job in finished_jobs:  # Garbage collect jobs
                 await k8s.delete_workflow(job.id)
@@ -302,7 +302,7 @@ class Manager:
                     session.delete(job)
                     Event.put(session, "job:deleted", {
                         "id": str(job.id)
-                    })
+                    }, job.user_id)
                 if delete_resources:  # Keep resources for potential resubmission
                     if job.s3_object:
                         await s3.delete(job.s3_object)
@@ -335,7 +335,7 @@ class Manager:
             Event.put(session, "job:new", {
                 "id": str(job.id),
                 "state": job.state
-            })
+            }, job.user_id)
             res = job.id
 
         # Signal the dispatcher to process new jobs
@@ -399,7 +399,7 @@ class Manager:
                 Event.put(session, "job:updated", {
                     "id": str(job.id),
                     "state": job.state
-                })
+                }, job.user_id)
             return
 
     async def _command_echo(self, job_id: str, message: str):

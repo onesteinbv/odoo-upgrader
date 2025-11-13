@@ -13,13 +13,6 @@
     </head>
     <body>
         <script type="module">
-            let apiKey = localStorage.getItem("api-key");
-
-            if (!apiKey) {
-                apiKey = prompt("API Key");
-                localStorage.setItem("api-key", apiKey);
-            }
-            
             import { LitElement, html } from 'https://esm.sh/lit@3.1.2';
 
             const upgradePath = "{{ upgrade_path }}";
@@ -61,7 +54,6 @@
                     const resp = await fetch(
                         url, {
                             method: "POST",
-                            headers: {"X-API-Key": apiKey},
                             body: formData
                         }
                     );

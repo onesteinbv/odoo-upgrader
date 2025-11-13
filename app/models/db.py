@@ -16,7 +16,6 @@ AsyncSession = sessionmaker(
 )
 
 def init_db():
-    SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
 
     # Truncate jobs, events

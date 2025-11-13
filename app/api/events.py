@@ -57,7 +57,7 @@ async def feed(request: Request, user_id: uuid.UUID | None = Depends(user_auth))
             try:
                 event = await queue.get()
                 event_user_id = event.pop("user_id", None)
-                if user_id and event_user_id and event_user_id != user_id:
+                if user_id and event_user_id != user_id:
                     queue.task_done()
                     continue
             except asyncio.CancelledError:

@@ -15,13 +15,13 @@ http_basic_auth = HTTPBasic(auto_error=False)
 def admin_auth(
     http_credentials: HTTPBasicCredentials = Security(http_basic_auth), 
 ):
+    """ Admin only authentication. """
     if not http_credentials:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, 
             detail="No credentials provided", 
             headers={"WWW-Authenticate": "Basic"}
         )
-    """ Admin only authentication. """
     if http_credentials.username != "admin":
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, 
