@@ -52,7 +52,7 @@ class User(SQLModel, table=True):
 
     def create_new_password(self, session: Session) -> str:
         password = secrets.token_urlsafe(128)
-        self.password = password
+        self.password = argon2.using(rounds=4, memory_cost=65536).hash(password)
         session.add(self)
         return password
 
