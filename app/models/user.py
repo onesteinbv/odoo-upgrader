@@ -42,6 +42,9 @@ class User(SQLModel, table=True):
 
     @classmethod
     def create(cls, session: Session, name: str) -> str:
+        if name == "admin":
+            raise ValueError("name cannot be `admin`")
+
         password = secrets.token_urlsafe(128)
         user = User(
             name=name,

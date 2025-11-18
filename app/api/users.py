@@ -21,9 +21,6 @@ async def get_all():
 async def create(
     name: str,
 ):
-    if name == "admin":
-        raise ValueError("name cannot be `admin`")
-
     with Session.begin() as session:
         return User.create(session, name)
 

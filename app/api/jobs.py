@@ -50,9 +50,9 @@ async def delete_all():
     return await manager.delete_all()
 
 
-@router.delete("/{job_id}")
+@router.delete("/{job_id}", dependencies=[Depends(admin_auth)])
 async def delete(
-    job_id: str, 
+    job_id: str
 ):
     return await manager.delete_job(job_id)
 
