@@ -387,3 +387,46 @@ spec:
         args: 
           - -c
           - odoo-upgrader/move-db.sh
+    - name: export-db
+      inputs:
+        parameters:
+          - name: image
+          - name: mode
+            default: "test"
+          - name: filestore
+            default: "false"
+      outputs:
+        artifacts:
+          - name: result
+            path: /opt/ou/out/result.zip
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ job.id }}-scripts"
+            defaultMode: 0755
+      container:
+        envFrom:
+          - secretRef:
+              name: "{{ job.id }}-secret-env"
+          - configMapRef:
+              name: "{{ job.id }}-env"
+        env:
+          - name: PGDATABASE
+            value: "{{ raw('workflow.name') }}-{{ raw('inputs.parameters.mode') }}"
+          - name: MODE
+            value: "{{ raw('inputs.parameters.mode') }}"
+          - name: FILESTORE
+            value: "{{ raw('inputs.parameters.filestore') }}"
+        volumeMounts:
+          - name: scripts
+            mountPath: /opt/ou/odoo-upgrader
+          - name: data
+            mountPath: /opt/ou/data
+        image: "{{ raw('inputs.parameters.image') }}"
+        command: [bash]
+        args: 
+          - -c
+          - |
+            odoo-upgrader/export-db.sh
+        securityContext:
+          runAsUser: 1000  # odoo
