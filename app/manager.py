@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import uuid
 from kubernetes import watch, client
+from kubernetes.client.exceptions import ApiException
 from sqlmodel import select
 import urllib3
 from urllib3.exceptions import ReadTimeoutError
@@ -94,6 +95,9 @@ class Manager:
                 logger.debug("Timeout watching workflows: %s", e)
             except urllib3.exceptions.MaxRetryError as e:
                 logger.error("Error watching workflows: %s", e)
+            except ApiException as e:
+                if e.status != 410: # Resource version too old
+                    logger.error("Unexpected error watching workflows: %s", e)
             except Exception as e:
                 logger.error("Unexpected error watching workflows: %s", e)
 
@@ -130,7 +134,7 @@ class Manager:
             return
         
         if event_type == "DELETED":
-            return 
+            return
 
         job_awaiting = False
         with Session.begin() as session:
