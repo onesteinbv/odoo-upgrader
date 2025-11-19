@@ -284,7 +284,17 @@ class Manager:
                 finished_jobs = Job.get_by_state(session, State.cleanup_finished)
 
             for job in pending_jobs:  # Dispatch clean workflows
-                upgrade_path = settings.get_upgrade_path(job.upgrade_path)
+                upgrade_path = settings.get_upgrade_path(job.upgrade_path, False)
+                if not upgrade_path:
+                    logger.error("Upgrade path `%s` doesn't exists anymore, cannot cleanup" % job.upgrade_path)
+                    with Session.begin() as session:
+                        job.state = State.cleanup_failed
+                        session.add(job)
+                        Event.put(session, "job:updated", {
+                            "id": str(job.id),
+                            "state": job.state
+                        }, job.user_id)
+                    continue
                 try:
                     await k8s.apply(
                         upgrade_path.manifest_dir / "cleanup", 
