@@ -82,12 +82,21 @@ class Manager:
 
         def _watch():
             try:
+                workflow_list = list_method(
+                    group="argoproj.io",
+                    version="v1alpha1",
+                    plural="workflows",
+                    namespace=settings.job_namespace
+                )
+                resource_version = workflow_list["metadata"]["resourceVersion"]
+
                 for event in w.stream(
                     list_method,
                     group="argoproj.io",
                     version="v1alpha1",
                     plural="workflows",
-                    namespace=settings.job_namespace
+                    namespace=settings.job_namespace,
+                    resource_version=resource_version
                 ):
                     logger.debug("Received event: %s", event)
                     self._on_workflow_event(event)
