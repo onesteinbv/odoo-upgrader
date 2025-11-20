@@ -25,7 +25,9 @@ class UpgradePathSettings(BaseModel):
     job_secret_env: Dict[str, str] = {}
 
     @field_validator("steps", mode="before")
-    def validate_steps(cls, steps: dict) -> List[StepSettings]:
+    def validate_steps(cls, steps: dict | list) -> List[StepSettings]:
+        if isinstance(steps, list):
+            return [StepSettings(**step) for step in steps]
         keys = list(steps.keys())
         keys.sort()
         return [StepSettings(**steps[key]) for key in keys]
