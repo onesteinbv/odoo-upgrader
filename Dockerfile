@@ -29,4 +29,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 EXPOSE 8000
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--log-config", "/app/log-config.yaml", "app.main:app"]
+CMD ["uvicorn", "--proxy-headers", "--host", "0.0.0.0", "--log-config", "/app/log-config.yaml", "app.main:app"]
