@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession as BaseAsyncSession
 
 from .job import Job
 from .event import Event
+from ..settings import settings
 
 engine = create_engine(
-    "sqlite:///app.db"
+    settings.db_url
 )
 
 Session = sessionmaker(engine)

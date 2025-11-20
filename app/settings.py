@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     job_secret_env: Dict[str, str] = {}
     job_domain: str
     admin_password: str | None = None
+    db_url: str = "sqlite:///app.db"
 
     s3: S3Settings
 
