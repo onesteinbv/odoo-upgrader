@@ -29,4 +29,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 EXPOSE 8000
 
-CMD ["uvicorn", "--proxy-headers", "--host", "0.0.0.0", "--log-config", "/app/log-config.yaml", "app.main:app"]
+# Expects to run behind a proxy that handles TLS termination
+CMD ["uvicorn", "--proxy-headers", "--forwarded-allow-ips=*", "--host", "0.0.0.0", "--log-config", "/app/log-config.yaml", "app.main:app"]
