@@ -1,3 +1,8 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: odoo-upgrader
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -34,7 +39,7 @@ metadata:
   name: odoo-upgrader-role-binding
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: odoo-upgrader
 roleRef:
   kind: Role
   name: odoo-upgrader-role
@@ -61,7 +66,7 @@ metadata:
   name: odoo-upgrader-cluster-role-binding
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: odoo-upgrader
     namespace: odoo-upgrader
 roleRef:
   kind: ClusterRole

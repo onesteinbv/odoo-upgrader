@@ -9,6 +9,7 @@ metadata:
     - odoo-upgrader/cleanup  # Prevent accidental deletion of workflow without cleanup
 spec:
   entrypoint: entrypoint
+  serviceAccountName: odoo-upgrader
   securityContext:
     fsGroup: 1000  # odoo
   volumeClaimTemplates:
