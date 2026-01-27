@@ -21,13 +21,27 @@
                     progress: {type: Number},
                     state: {type: String},
                     jobId: {type: String},
-                    job: {state: true, attribute: false}
+                    job: {state: true, attribute: false},
+                    resumeModalActive: { type: Boolean }
                 }
 
                 constructor() {
                     super();
                     this.job = {};
                     this.eventSource = null;
+                }
+
+                _onResumeClicked(e) {
+                    this.resumeModalActive = true;
+                }
+
+                _onResumeConfirmClicked() {
+                    this._resumeJob();
+                    this.resumeModalActive = false;
+                }
+
+                _onCloseModalClicked(e) {
+                    this.resumeModalActive = false
                 }
 
                 connectedCallback() {
@@ -73,13 +87,17 @@
                     return res.json();
                 }
 
+                async _resumeJob() {
+                    const res = await fetch(`/api/v1/jobs/${this.jobId}/resume`, { method: "POST"});
+                    return res.json();
+                }
+
                 createRenderRoot() {
                     return this;
                 }
 
                 onDownloadClicked() {
                     const withArtifacts = this.job.steps.filter(s => s.artifacts.length);
-                    console.log(withArtifacts);
                     const stepId = withArtifacts[withArtifacts.length - 1].id;
                     window.open(`/api/v1/jobs/${this.job.id}/${stepId}/download/result`);
                 }
@@ -105,6 +123,36 @@
                                 <i class="fas fa-heart-crack"></i> <b>Upgrade failed</b>
                             </div>
                         ` || ""}
+                        ${this.job.annotations && "odoo-upgrader/deployment-url" in this.job.annotations && html`
+                            <a class="button is-large" href="${this.job.annotations["odoo-upgrader/deployment-url"]}">
+                                <span class="icon">
+                                    <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                </span>
+                            </a>
+                        ` || ""}
+                        ${this.job.suspended && html`
+                            <button class="button is-large" @click="${this._onResumeClicked}">
+                                <span class="icon">
+                                    <i class="fa fa-play"></i>
+                                </span>
+                            </button>
+                        ` || ""}
+                        
+                        <div class="modal ${this.resumeModalActive ? "is-active" : ""}">
+                            <div class="modal-background"></div>
+                            <div class="modal-card">
+                                <section class="modal-card-body">
+                                    Are you sure you want to <b>resume</b>?
+                                </section>
+                                <footer class="modal-card-foot">
+                                    <div class="buttons">
+                                        <button class="button is-success" @click="${this._onResumeConfirmClicked}">Yes, continue</button>
+                                        <button @click="${this._onCloseModalClicked}" class="button">Cancel</button>
+                                    </div>
+                                </footer>
+                            </div>
+                            <button @click="${this._onCloseModalClicked}" class="modal-close is-large" aria-label="close"></button>
+                        </div>
                     `
                 }
             }

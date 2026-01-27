@@ -272,7 +272,7 @@
                                         <code class="tag is-dark">
                                             ${this.job.id}
                                         </code>
-                                        ${"odoo-upgrader/deployment-url" in this.job.annotations && html`
+                                        ${this.job.annotations && "odoo-upgrader/deployment-url" in this.job.annotations && html`
                                             <a class="icon tag ml-1" href="${this.job.annotations["odoo-upgrader/deployment-url"]}">
                                                 <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
                                             </a>
